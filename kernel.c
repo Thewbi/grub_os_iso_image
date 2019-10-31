@@ -1,45 +1,137 @@
-#define VGA_ADDRESS 0xB8000   /* video memory begins here. */
+#include "descriptor_tables.h"
+#include "memory_map.h"
+#include "multiboot.h"
+#include "placement_memory.h"
 
-/* VGA provides support for 16 colors */
-#define BLACK 0
-#define GREEN 2
-#define RED 4
-#define YELLOW 14
-#define WHITE_COLOR 15
+// end is defined in the linker script.
+extern unsigned int end;
 
-unsigned short *terminal_buffer;
-unsigned int vga_index;
-
-void clear_screen(void)
-{
-    int index = 0;
-    /* there are 25 lines each of 80 columns;
-       each element takes 2 bytes */
-    while (index < 80 * 25 * 2) {
-            terminal_buffer[index] = ' ';
-            index += 2;
-    }
+long factorial(int n) {
+  if (n == 0)
+    return 1;
+  else
+    return (n * factorial(n - 1));
 }
 
-void print_string(char *str, unsigned char color)
-{
-    int index = 0;
-    while (str[index]) {
-            terminal_buffer[vga_index] = (unsigned short)str[index]|(unsigned short)color << 8;
-            index++;
-            vga_index++;
-    }
-}
+void processELF(multiboot_info_t *mbi) {
 
-void main(void)
-{
-    /* TODO: Add random f-word here */
-    terminal_buffer = (unsigned short *)VGA_ADDRESS;
-    vga_index = 0;
+  printf("\nReading ELF information ...\n");
 
-    clear_screen();
-    print_string("Hello World!", YELLOW);
-    vga_index = 80;    /* next line */
-    print_string("Goodbye World!", RED);
+  // Is the section header table of ELF valid?
+  if (!CHECK_FLAG(mbi->flags, 5)) {
+
+    printf("\nNo ELF information found.\n");
     return;
+  }
+
+  elf_section_header_table_t *elf_sec = &(mbi->u.elf_sec);
+
+  printf("elf_sec: num = %d, size = 0x%x,"
+         " addr = 0x%x, shndx = 0x%x\n",
+         elf_sec->num, elf_sec->size, elf_sec->addr, elf_sec->shndx);
+
+  printf("\nReading ELF information done.\n");
+}
+
+void processMods(multiboot_info_t *mbi) {
+
+  printf("\nReading multiboot modules ...\n");
+
+  // Are mods_* valid?
+  if (!CHECK_FLAG(mbi->flags, 3)) {
+
+    printf("No multiboot modules found!\n");
+    return;
+  }
+
+  module_t *mod;
+  int i;
+  int j;
+
+  printf("\nmods_count = %d, mods_addr = 0x%x\n", mbi->mods_count,
+         mbi->mods_addr);
+
+  for (i = 0, mod = (module_t *)mbi->mods_addr; i < mbi->mods_count;
+       i++, mod += sizeof(module_t)) {
+
+    printf("\nModule %d) mod_start = 0x%x, mod_end = 0x%x, string = %s\n", i,
+           mod->mod_start, mod->mod_end, (char *)mod->string);
+
+    /*
+          // DEBUG: output the first characters from the test module
+          char *character = mod->mod_start;
+          for (j = 0; j < 37; j++) {
+            // putchar(&mod->mod_start);
+            putchar((*character));
+            character++;
+          }
+          printf("\n");
+          */
+
+    /*
+          memory_area_t rhs;
+          rhs.start = mod->mod_start;
+          rhs.size = mod->mod_end - mod->mod_start;
+
+          // DEBUG: check if it is contained in a free memory area
+          for (int i = 0; i < 10; i++) {
+            if (contains(&free_memory_areas[i], &rhs)) {
+              printf("contained in free memory area.\n");
+            }
+          }
+
+          // DEBUG: check if it is contained in a used memory area
+          for (int i = 0; i < 10; i++) {
+            if (contains(&used_memory_areas[i], &rhs)) {
+              printf("contained in used memory area .\n");
+            }
+          }
+    */
+  }
+
+  printf("\nReading multiboot modules done!\n");
+}
+
+void main(unsigned long magic, unsigned long addr) {
+
+  // Set MBI to the address of the Multiboot information structure.
+  multiboot_info_t *mbi = (multiboot_info_t *)addr;
+
+  // Initialise all the ISRs and segmentation
+  init_descriptor_tables();
+
+  terminal_buffer = (unsigned short *)VGA_ADDRESS;
+
+  // clear_screen();
+  cls();
+  vga_index = 0;
+
+  // use the address of end! Not its value!
+  // printf("End from linker script: 0x%x\n", &end);
+
+  // Am I booted by a Multiboot-compliant boot loader?
+  if (magic == MULTIBOOT_BOOTLOADER_MAGIC) {
+
+    // printf("Booted by a multiboot bootloader magic number!\n");
+
+    process_multiboot_memory_map(mbi);
+
+    printf("\n");
+    dump_free_memory_map();
+
+    // processELF(mbi);
+
+    // processMods(mbi);
+  }
+
+  // TODO: subtract the first Megabyte from free memory as it is used by basic
+  // BIOS stuff
+  // TODO: find where the kenel elf file was loaded and exclude it from free
+  // memory
+  // TODO: setup the stack and then exclude the stack from free memory
+  // TODO: subtract all loaded modules from free memory!
+
+  // printf("Goodbye World!\n");
+
+  return;
 }

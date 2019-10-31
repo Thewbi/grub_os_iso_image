@@ -10,4 +10,6 @@ SECTIONS
    }
    .data : { *(.data) }
    .bss  : { *(.bss)  }
+
+   end = .; _end = .; __end = .;
  }
