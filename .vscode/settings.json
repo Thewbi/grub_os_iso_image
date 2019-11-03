@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "placement_memory.h": "c",
+        "multiboot.h": "c",
+        "common.h": "c",
+        "cmocka.h": "c",
+        "random": "c"
+    }
+}
