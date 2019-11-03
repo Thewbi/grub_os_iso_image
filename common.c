@@ -23,15 +23,17 @@ u16int inw(u16int port) {
 */
 
 // Copy len bytes from src to dest.
-void memcpy(u8int *dest, const u8int *src, u32int len) {
+void k_memcpy(u8int *dest, const u8int *src, u32int len) {
+
   const u8int *sp = (const u8int *)src;
   u8int *dp = (u8int *)dest;
-  for (; len != 0; len--)
+  for (; len != 0; len--) {
     *dp++ = *sp++;
+  }
 }
 
 // Write len copies of val into dest.
-void memset(u8int *dest, u8int val, u32int len) {
+void k_memset(u8int *dest, u8int val, u32int len) {
 
   u8int *temp = (u8int *)dest;
   for (; len != 0; len--) {
@@ -41,9 +43,11 @@ void memset(u8int *dest, u8int val, u32int len) {
 
 // Compare two strings. Should return -1 if
 // str1 < str2, 0 if they are equal or 1 otherwise.
-int strcmp(char *str1, char *str2) {
+int k_strcmp(char *str1, char *str2) {
+
   int i = 0;
   int failed = 0;
+
   while (str1[i] != '\0' && str2[i] != '\0') {
     if (str1[i] != str2[i]) {
       failed = 1;
@@ -51,17 +55,20 @@ int strcmp(char *str1, char *str2) {
     }
     i++;
   }
+
   // why did the loop exit?
   if ((str1[i] == '\0' && str2[i] != '\0') ||
-      (str1[i] != '\0' && str2[i] == '\0'))
+      (str1[i] != '\0' && str2[i] == '\0')) {
     failed = 1;
+  }
 
   return failed;
 }
 
 // Copy the NULL-terminated string src into dest, and
 // return dest.
-char *strcpy(char *dest, const char *src) {
+char *k_strcpy(char *dest, const char *src) {
+
   do {
     *dest++ = *src++;
   } while (*src != 0);
@@ -69,7 +76,8 @@ char *strcpy(char *dest, const char *src) {
 
 // Concatenate the NULL-terminated string src onto
 // the end of dest, and return dest.
-char *strcat(char *dest, const char *src) {
+char *k_strcat(char *dest, const char *src) {
+
   while (*dest != 0) {
     *dest = *dest++;
   }
@@ -77,11 +85,12 @@ char *strcat(char *dest, const char *src) {
   do {
     *dest++ = *src++;
   } while (*src != 0);
+
   return dest;
 }
 
 /* Clear the screen and initialize VIDEO, XPOS and YPOS. */
-void cls(void) {
+void k_cls(void) {
 
   int i;
 
@@ -97,7 +106,7 @@ void cls(void) {
 /* Convert the integer D to a string and save the string in BUF. If
    BASE is equal to 'd', interpret that D is decimal, and if BASE is
    equal to 'x', interpret that D is hexadecimal. */
-void itoa(char *buf, int base, int d) {
+void k_itoa(char *buf, int base, int d) {
 
   char *p = buf;
   char *p1, *p2;
@@ -109,8 +118,9 @@ void itoa(char *buf, int base, int d) {
     *p++ = '-';
     buf++;
     ud = -d;
-  } else if (base == 'x')
+  } else if (base == 'x') {
     divisor = 16;
+  }
 
   /* Divide UD by DIVISOR until UD == 0. */
   do {
@@ -135,7 +145,7 @@ void itoa(char *buf, int base, int d) {
 }
 
 /* Put the character C on the screen. */
-void putchar(int c) {
+void k_putchar(int c) {
 
   if (c == '\n' || c == '\r') {
   newline:
@@ -155,8 +165,13 @@ void putchar(int c) {
 }
 
 /* Format a string and print it on the screen, just like the libc
-   function printf. */
-void printf(const char *format, ...) {
+   function printf.
+
+   Does not support float or double.
+
+   Is buggy when using more than one format specifier in the same format string.
+   */
+void k_printf(const char *format, ...) {
 
   vga_index += 80;
 
@@ -170,7 +185,7 @@ void printf(const char *format, ...) {
 
     if (c != '%') {
 
-      putchar(c);
+      k_putchar(c);
 
     } else {
 
@@ -187,7 +202,7 @@ void printf(const char *format, ...) {
       case 'x':
 
         // encode the current argument into the buffer
-        itoa(buf, c, *((int *)arg++));
+        k_itoa(buf, c, *((int *)arg++));
         p = buf;
         goto string;
         break;
@@ -200,19 +215,19 @@ void printf(const char *format, ...) {
       string:
         // output a string
         while (*p) {
-          putchar(*p++);
+          k_putchar(*p++);
         }
         break;
 
       default:
-        putchar(*((int *)arg++));
+        k_putchar(*((int *)arg++));
         break;
       }
     }
   }
 }
 
-void clear_screen(void) {
+void k_clear_screen(void) {
 
   int index = 0;
   /* there are 25 lines each of 80 columns; each element takes 2 bytes */
@@ -222,7 +237,7 @@ void clear_screen(void) {
   }
 }
 
-void print_string(char *str, unsigned char color) {
+void k_print_string(char *str, unsigned char color) {
 
   int index = 0;
   while (str[index]) {
@@ -231,4 +246,86 @@ void print_string(char *str, unsigned char color) {
     index++;
     vga_index++;
   }
+}
+
+void k_print_float(float data) {
+
+  char int_part_buf[20];
+  for (int i = 0; i < 20; i++) {
+    int_part_buf[i] = 0;
+  }
+
+  char fraction_part_buf[20];
+  for (int i = 0; i < 20; i++) {
+    fraction_part_buf[i] = 0;
+  }
+
+  int int_part = (int)data;
+
+  float temp = data - (float)int_part;
+
+  unsigned int max_fractions = 3;
+  while ((temp - (int)temp) > 0.0f && max_fractions > 0) {
+    temp *= 10.0f;
+    max_fractions--;
+  }
+
+  int float_part = temp;
+
+  printf("int %d frac %d\n", int_part, float_part);
+
+  k_itoa(int_part_buf, 10, int_part);
+  k_itoa(fraction_part_buf, 10, float_part);
+
+  printf("int_part_buf %s\n", int_part_buf);
+  printf("fraction_part_buf %s\n", fraction_part_buf);
+
+  char total_buf[41];
+  int total_buf_index = 0;
+  for (int i = 0; i < 41; i++) {
+    total_buf[i] = 0;
+  }
+
+  printf("inserting int part\n");
+
+  // insert the integral part of the floating point number into the full array
+  for (int i = 0; i < 20; i++) {
+
+    if (int_part_buf[i] == 0) {
+      continue;
+    }
+
+    total_buf[total_buf_index] = int_part_buf[i];
+    total_buf_index++;
+  }
+
+  printf("inserting dot\n");
+
+  total_buf[total_buf_index] = '.';
+  total_buf_index++;
+
+  printf("inserting frac part\n");
+
+  // insert the fractional part of the floating point number into the full array
+  for (int i = 0; i < 20; i++) {
+
+    if (fraction_part_buf[i] == 0) {
+      continue;
+    }
+
+    total_buf[total_buf_index] = fraction_part_buf[i];
+    total_buf_index++;
+  }
+
+  printf("output total_buf_index %d\n", total_buf_index);
+
+  printf("float %s\n", total_buf);
+
+  // k_putchar segfaults during mockito tests because it accesses video memory
+  // which is off limits for cmockito user space applications on modern linux
+  // systems with paging enabled!
+
+  // for (int i = 0; i <= total_buf_index; i++) {
+  //   k_putchar(total_buf[i]);
+  // }
 }

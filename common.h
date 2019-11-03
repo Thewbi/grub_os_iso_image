@@ -4,6 +4,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#define USIGNED_INT_MAX 0xFFFFFFFF
+
 // Some nice typedefs, to standardise sizes across platforms.
 // These typedefs are written for 32-bit X86.
 typedef unsigned int u32int;
@@ -53,14 +55,15 @@ int ypos;
 /* Point to the video memory. */
 volatile unsigned char *video;
 
-void cls(void);
-void itoa(char *buf, int base, int d);
-void putchar(int c);
-void printf(const char *format, ...);
-void memcpy(u8int *dest, const u8int *src, u32int len);
-void memset(u8int *dest, u8int val, u32int len);
-int strcmp(char *str1, char *str2);
-char *strcpy(char *dest, const char *src);
-char *strcat(char *dest, const char *src);
+void k_cls(void);
+void k_itoa(char *buf, int base, int d);
+void k_putchar(int c);
+void k_printf(const char *format, ...);
+void k_memcpy(u8int *dest, const u8int *src, u32int len);
+void k_memset(u8int *dest, u8int val, u32int len);
+int k_strcmp(char *str1, char *str2);
+char *k_strcpy(char *dest, const char *src);
+char *k_strcat(char *dest, const char *src);
+void k_print_float(float data);
 
 #endif // COMMON_H

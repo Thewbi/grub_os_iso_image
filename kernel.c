@@ -15,32 +15,32 @@ long factorial(int n) {
 
 void processELF(multiboot_info_t *mbi) {
 
-  printf("\nReading ELF information ...\n");
+  k_printf("\nReading ELF information ...\n");
 
   // Is the section header table of ELF valid?
   if (!CHECK_FLAG(mbi->flags, 5)) {
 
-    printf("\nNo ELF information found.\n");
+    k_printf("\nNo ELF information found.\n");
     return;
   }
 
   elf_section_header_table_t *elf_sec = &(mbi->u.elf_sec);
 
-  printf("elf_sec: num = %d, size = 0x%x,"
-         " addr = 0x%x, shndx = 0x%x\n",
-         elf_sec->num, elf_sec->size, elf_sec->addr, elf_sec->shndx);
+  k_printf("elf_sec: num = %d, size = 0x%x,"
+           " addr = 0x%x, shndx = 0x%x\n",
+           elf_sec->num, elf_sec->size, elf_sec->addr, elf_sec->shndx);
 
-  printf("\nReading ELF information done.\n");
+  k_printf("\nReading ELF information done.\n");
 }
 
 void processMods(multiboot_info_t *mbi) {
 
-  printf("\nReading multiboot modules ...\n");
+  k_printf("\nReading multiboot modules ...\n");
 
   // Are mods_* valid?
   if (!CHECK_FLAG(mbi->flags, 3)) {
 
-    printf("No multiboot modules found!\n");
+    k_printf("No multiboot modules found!\n");
     return;
   }
 
@@ -48,14 +48,14 @@ void processMods(multiboot_info_t *mbi) {
   int i;
   int j;
 
-  printf("\nmods_count = %d, mods_addr = 0x%x\n", mbi->mods_count,
-         mbi->mods_addr);
+  k_printf("\nmods_count = %d, mods_addr = 0x%x\n", mbi->mods_count,
+           mbi->mods_addr);
 
   for (i = 0, mod = (module_t *)mbi->mods_addr; i < mbi->mods_count;
        i++, mod += sizeof(module_t)) {
 
-    printf("\nModule %d) mod_start = 0x%x, mod_end = 0x%x, string = %s\n", i,
-           mod->mod_start, mod->mod_end, (char *)mod->string);
+    k_printf("\nModule %d) mod_start = 0x%x, mod_end = 0x%x, string = %s\n", i,
+             mod->mod_start, mod->mod_end, (char *)mod->string);
 
     /*
           // DEBUG: output the first characters from the test module
@@ -89,7 +89,7 @@ void processMods(multiboot_info_t *mbi) {
     */
   }
 
-  printf("\nReading multiboot modules done!\n");
+  k_printf("\nReading multiboot modules done!\n");
 }
 
 void main(unsigned long magic, unsigned long addr) {
@@ -99,6 +99,8 @@ void main(unsigned long magic, unsigned long addr) {
 
   // Initialise all the ISRs and segmentation
   init_descriptor_tables();
+
+  clear_placement_memory_array();
 
   terminal_buffer = (unsigned short *)VGA_ADDRESS;
 
@@ -114,22 +116,28 @@ void main(unsigned long magic, unsigned long addr) {
 
     // printf("Booted by a multiboot bootloader magic number!\n");
 
-    process_multiboot_memory_map(mbi);
+    if (process_multiboot_memory_map(mbi)) {
+      k_printf("Processing placement memory failed!");
+      return;
+    }
 
-    printf("\n");
+    k_printf("\n");
     dump_free_memory_map();
 
+    // TODO: find where the kenel elf file was loaded and exclude it from free
+    // memory
     // processELF(mbi);
 
+    // TODO: subtract all loaded modules from free memory!
     // processMods(mbi);
   }
 
   // TODO: subtract the first Megabyte from free memory as it is used by basic
   // BIOS stuff
-  // TODO: find where the kenel elf file was loaded and exclude it from free
-  // memory
+
   // TODO: setup the stack and then exclude the stack from free memory
-  // TODO: subtract all loaded modules from free memory!
+
+  // TODO: subtract the placement memory are from free memory!
 
   // printf("Goodbye World!\n");
 

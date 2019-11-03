@@ -1,6 +1,6 @@
 #include "memory_map.h"
 
-void process_multiboot_memory_map(multiboot_info_t *mbi) {
+int process_multiboot_memory_map(multiboot_info_t *mbi) {
 
   printf("\nReading Memory Map ...\n");
 
@@ -8,10 +8,8 @@ void process_multiboot_memory_map(multiboot_info_t *mbi) {
   if (!CHECK_FLAG(mbi->flags, 6)) {
 
     printf("\nNo Memory Map found ...\n");
-    return;
+    return -1;
   }
-
-  init_placement_memory();
 
   memory_map_t *mmap;
 
@@ -36,18 +34,30 @@ void process_multiboot_memory_map(multiboot_info_t *mbi) {
     // occupied by defective RAM modules and all other values currently
     // indicated a reserved area.
 
+    multiboot_uint64_t start = 0;
+    multiboot_uint64_t size = 0;
+
     switch (mmap->type) {
 
     case 1:
       // printf("Available RAM\n");
 
-      free_memory_areas[free_memory_area_index].start =
-          mmap->base_addr_high * sizeof(long) + mmap->base_addr_low;
+      // free_memory_areas[free_memory_area_index].start =
+      //     mmap->base_addr_high * sizeof(long) + mmap->base_addr_low;
 
-      free_memory_areas[free_memory_area_index].size =
-          mmap->length_high * sizeof(long) + mmap->length_low;
+      // free_memory_areas[free_memory_area_index].size =
+      //     mmap->length_high * sizeof(long) + mmap->length_low;
 
-      free_memory_area_index++;
+      // free_memory_area_index++;
+
+      start = mmap->base_addr_high * sizeof(long) + mmap->base_addr_low;
+      size = mmap->length_high * sizeof(long) + mmap->length_low;
+
+      if (insert_area(start, size)) {
+        printf("Inserting free memory area failed!");
+        return -2;
+      }
+
       break;
 
     case 3:
@@ -92,21 +102,6 @@ void process_multiboot_memory_map(multiboot_info_t *mbi) {
   // dump_free_memory_map();
 
   printf("Reading Memory Map done.\n");
-}
 
-void dump_free_memory_map() {
-
-  printf("Free Memory Areas:\n");
-
-  for (int i = 0; i < free_memory_area_index; i++) {
-
-    // bugged
-    printf("Bugged: start = 0x%x size = 0x%x\n", free_memory_areas[i].start,
-           free_memory_areas[i].size);
-
-    // fine
-    printf("Fine: start = 0x%x", free_memory_areas[i].start);
-    printf(" size = 0x%x", free_memory_areas[i].size);
-    printf("\n");
-  }
+  return 0;
 }
