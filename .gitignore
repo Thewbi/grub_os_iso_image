@@ -1,3 +1,9 @@
+# C cmocka unit tests
+testmain
+
+# kernel dev
+image.iso
+
 # Prerequisites
 *.d
 

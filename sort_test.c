@@ -81,15 +81,46 @@ static void test_bubble_sort() {
 
   // printf("Before:\n");
   // for (int i = 0; i < array_size; i++) {
-  //   printf("%d\n", data[i]);
+  //   printf("%d ", data[i]);
   // }
 
   bubblesort(data, array_size, sizeof(int), int_comparator, int_swap);
 
-  // printf("After:\n");
+  // printf("\nAfter:\n");
   // for (int i = 0; i < array_size; i++) {
-  //   printf("%d\n", data[i]);
+  //   printf("%d ", data[i]);
   // }
+
+  for (int i = 0; i < array_size; i++) {
+    assert_int_equal(i + 1, data[i]);
+  }
+}
+
+static void test_quick_sort() {
+
+  const int array_size = 30;
+
+  int data[array_size];
+
+  for (int i = 0; i < array_size; i++) {
+    data[i] = i + 1;
+  }
+
+  shuffle(50, data, array_size, sizeof(int), int_swap);
+
+  // printf("Before:\n");
+  // for (int i = 0; i < array_size; i++) {
+  //   printf("%d ", data[i]);
+  // }
+  // printf("\n");
+
+  quicksort(data, array_size, sizeof(int), int_comparator, int_swap);
+
+  // printf("\nAfter:\n");
+  // for (int i = 0; i < array_size; i++) {
+  //   printf("%d ", data[i]);
+  // }
+  // printf("\n");
 
   for (int i = 0; i < array_size; i++) {
     assert_int_equal(i + 1, data[i]);
@@ -128,6 +159,7 @@ int main(int argc, char **argv) {
       cmocka_unit_test(test_int_swap),
       cmocka_unit_test(test_bubble_sort),
       cmocka_unit_test(test_bubble_sort_simple),
+      cmocka_unit_test(test_quick_sort),
       cmocka_unit_test(test_shuffle),
   };
 

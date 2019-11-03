@@ -1,5 +1,6 @@
 #!/bin/bash
 
+make clean
 rm ./testmain
 gcc -c sort.c random.c
 gcc -c sort_test.c -I/home/wbi/dev/cmocka-1.1.5/include

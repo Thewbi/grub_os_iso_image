@@ -4,6 +4,16 @@
         "multiboot.h": "c",
         "common.h": "c",
         "cmocka.h": "c",
-        "random": "c"
+        "random": "c",
+        "array": "c",
+        "hash_map": "c",
+        "deque": "c",
+        "list": "c",
+        "string": "c",
+        "unordered_map": "c",
+        "vector": "c",
+        "string_view": "c",
+        "initializer_list": "c",
+        "type_traits": "c"
     }
 }

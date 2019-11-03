@@ -1,9 +1,18 @@
 #include "random.h"
 
-unsigned int retrieve_pseudo_random(int x0, int x1) {
+unsigned long retrieve_pseudo_random(int x0) {
 
   // TODO: fix this: look up a pseudo random number generator on the internet.
-  return retrieve_rdrand();
+  // return retrieve_rdrand();
+
+  // https://wiki.osdev.org/Random_Number_Generator - Linear congruential
+  // generator
+
+  unsigned long m = 0x100000000; // 2 ^ 32, pow(2, 32)
+  unsigned long a = 1103515245;
+  unsigned long c = 12345;
+
+  return (a * x0 + c) % m;
 }
 
 /*
