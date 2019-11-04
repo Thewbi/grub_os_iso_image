@@ -6,21 +6,24 @@
 // end is defined in the linker script.
 extern unsigned int end;
 
-long factorial(int n) {
-  if (n == 0)
-    return 1;
-  else
-    return (n * factorial(n - 1));
-}
+// long factorial(int n) {
+//   if (n == 0)
+//     return 1;
+//   else
+//     return (n * factorial(n - 1));
+// }
 
+//
+//
+//
 void processELF(multiboot_info_t *mbi) {
 
-  k_printf("\nReading ELF information ...\n");
+  k_printf("Reading ELF information ...\n");
 
   // Is the section header table of ELF valid?
   if (!CHECK_FLAG(mbi->flags, 5)) {
 
-    k_printf("\nNo ELF information found.\n");
+    k_printf("No ELF information found.\n");
     return;
   }
 
@@ -30,17 +33,29 @@ void processELF(multiboot_info_t *mbi) {
            " addr = 0x%x, shndx = 0x%x\n",
            elf_sec->num, elf_sec->size, elf_sec->addr, elf_sec->shndx);
 
-  k_printf("\nReading ELF information done.\n");
+  // block memory
+  int address = allocate_area(elf_sec->addr, elf_sec->size);
+
+  // Do not care about allocation errors. If there is an error, the elf was
+  // loaded to blocked memory already which is fine. if (address < 0) {
+  //   k_printf("Allocating memory failed!");
+  //   return;
+  // }
+
+  k_printf("Reading ELF information done.\n");
 }
 
+//
+//
+//
 void processMods(multiboot_info_t *mbi) {
 
-  k_printf("\nReading multiboot modules ...\n");
+  k_printf("Reading multiboot modules ...\n");
 
   // Are mods_* valid?
   if (!CHECK_FLAG(mbi->flags, 3)) {
 
-    k_printf("No multiboot modules found!\n");
+    // k_printf("No multiboot modules found!\n");
     return;
   }
 
@@ -48,14 +63,25 @@ void processMods(multiboot_info_t *mbi) {
   int i;
   int j;
 
-  k_printf("\nmods_count = %d, mods_addr = 0x%x\n", mbi->mods_count,
+  k_printf("mods_count = %d, mods_addr = 0x%x\n", mbi->mods_count,
            mbi->mods_addr);
 
   for (i = 0, mod = (module_t *)mbi->mods_addr; i < mbi->mods_count;
        i++, mod += sizeof(module_t)) {
 
-    k_printf("\nModule %d) mod_start = 0x%x, mod_end = 0x%x, string = %s\n", i,
-             mod->mod_start, mod->mod_end, (char *)mod->string);
+    k_printf("Module %d) mod_start = 0x%x, mod_end = 0x%x, string = %s\n",
+             i + 1, mod->mod_start, mod->mod_end, (char *)mod->string);
+
+    // k_dump_free_memory_map();
+
+    // block memory
+    int address = allocate_area(mod->mod_start, mod->mod_end - mod->mod_start);
+
+    // DO not care about failed allocation at this point
+    // if (address < 0) {
+    //   k_printf("Allocating memory failed!");
+    //   return;
+    // }
 
     /*
           // DEBUG: output the first characters from the test module
@@ -89,7 +115,7 @@ void processMods(multiboot_info_t *mbi) {
     */
   }
 
-  k_printf("\nReading multiboot modules done!\n");
+  k_printf("Reading multiboot modules done!\n");
 }
 
 void main(unsigned long magic, unsigned long addr) {
@@ -105,7 +131,7 @@ void main(unsigned long magic, unsigned long addr) {
   terminal_buffer = (unsigned short *)VGA_ADDRESS;
 
   // clear_screen();
-  cls();
+  k_cls();
   vga_index = 0;
 
   // use the address of end! Not its value!
@@ -117,23 +143,31 @@ void main(unsigned long magic, unsigned long addr) {
     // printf("Booted by a multiboot bootloader magic number!\n");
 
     if (process_multiboot_memory_map(mbi)) {
-      k_printf("Processing placement memory failed!");
+      k_printf("Processing placement memory failed!\n");
       return;
     }
 
-    k_printf("\n");
-    dump_free_memory_map();
+    // k_printf("\n");
 
-    // TODO: find where the kenel elf file was loaded and exclude it from free
+    // subtract the first Megabyte from free memory as it is used by basic
+    // BIOS stuff.
+    // The first 639.0 KB are free, then everything is reserved up the the first
+    // MB. By allocating the first 639.0 KB, the entire first MB is reserved.
+    int address = allocate_area(0, 639 * 1024);
+    if (address < 0) {
+      k_printf("Allocating memory failed!\n");
+      return;
+    }
+
+    // find where the kenel elf file was loaded and exclude it from free
     // memory
-    // processELF(mbi);
+    processELF(mbi);
 
-    // TODO: subtract all loaded modules from free memory!
-    // processMods(mbi);
+    // subtract all loaded modules from free memory!
+    processMods(mbi);
+
+    k_dump_free_memory_map();
   }
-
-  // TODO: subtract the first Megabyte from free memory as it is used by basic
-  // BIOS stuff
 
   // TODO: setup the stack and then exclude the stack from free memory
 

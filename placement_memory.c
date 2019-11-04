@@ -8,7 +8,7 @@ void clear_placement_memory_array() {
   free_memory_area_index = 0;
 
   // initialize all areas to zero
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < MAX_MEMORY_AREAS_SIZE; i++) {
 
     free_memory_areas[i].start = 0;
     free_memory_areas[i].size = 0;
@@ -55,29 +55,74 @@ unsigned int memory_areas_size() {
 int is_free(memory_area_t *area) { return area->size == 0 && area->start == 0; }
 
 // Outputs the free areas in the memory map
+void k_dump_free_memory_map() {
+
+  k_printf("Free Memory Areas:\n");
+
+  for (int i = 0; i < free_memory_area_index; i++) {
+
+    // // bugged - printf does not deal with two format strings correctly!
+    // k_printf("Bugged: start = 0x%x size = 0x%x\n",
+    // free_memory_areas[i].start,
+    //        free_memory_areas[i].size);
+
+    // // fine
+    // k_printf("Fine: start = 0x%x", free_memory_areas[i].start);
+    // k_printf(" size = 0x%x", free_memory_areas[i].size);
+    // k_printf("\n");
+
+    // // fine
+    // k_printf("Fine: start = %d", free_memory_areas[i].start);
+    // k_printf(" size = %d", free_memory_areas[i].size);
+    // k_printf("\n");
+
+    multiboot_uint64_t end = 0;
+    if (free_memory_areas[i].size > 0) {
+      end = free_memory_areas[i].start + free_memory_areas[i].size - 1;
+    }
+
+    float size = free_memory_areas[i].size;
+
+    char *unit = "B";
+
+    if (size >= 1024.0f) {
+      size /= 1024.0f;
+      unit = "KB";
+    }
+
+    if (size >= 1024.0f) {
+      size /= 1024.0f;
+      unit = "MB";
+    }
+
+    // The definition for 1G of RAM in this OS is 1 GB = 1024 MB
+    // The definition for 1 GB of hard drive space in this OS may vary. I do not
+    // know yet, because harddrive access is not implemented yet
+    if (size >= 1024.0f) {
+      size /= 1024.0f;
+      unit = "GB";
+    }
+
+    k_printf("[%d, ", free_memory_areas[i].start);
+    k_printf("%d] ", end);
+    // k_printf("size: %.2f ", size);
+    k_print_float(size);
+    k_printf("%s\n", unit);
+  }
+}
+
+/*
 void dump_free_memory_map() {
 
   printf("Free Memory Areas:\n");
 
   for (int i = 0; i < free_memory_area_index; i++) {
 
-    // // bugged - printf does not deal with two format strings correctly!
-    // printf("Bugged: start = 0x%x size = 0x%x\n", free_memory_areas[i].start,
-    //        free_memory_areas[i].size);
+    multiboot_uint64_t end = 0;
+    if (free_memory_areas[i].size > 0) {
+      end = free_memory_areas[i].start + free_memory_areas[i].size - 1;
+    }
 
-    // // fine
-    // printf("Fine: start = 0x%x", free_memory_areas[i].start);
-    // printf(" size = 0x%x", free_memory_areas[i].size);
-    // printf("\n");
-
-    // // fine
-    // printf("Fine: start = %d", free_memory_areas[i].start);
-    // printf(" size = %d", free_memory_areas[i].size);
-    // printf("\n");
-
-    multiboot_uint64_t end =
-        free_memory_areas[i].start + free_memory_areas[i].size - 1;
-    // float size = end - free_memory_areas[i].start;
     float size = free_memory_areas[i].size;
 
     char *unit = "B";
@@ -102,10 +147,11 @@ void dump_free_memory_map() {
 
     printf("[%d, ", free_memory_areas[i].start);
     printf("%d] ", end);
-    printf("size: %.2f ", size);
+    printf("%.2f ", size);
     printf("%s\n", unit);
   }
 }
+*/
 
 // find the first block in the list that is large enough to contain the size of
 // bytes requested. Reduce this block by the amount of bytes requested.
@@ -115,7 +161,7 @@ void dump_free_memory_map() {
 // -> Shift all blocks after the removed one down a position.
 //
 // Special Case: Does not fit into any available block
-int allocate_area(multiboot_uint64_t size) {
+int allocate(multiboot_uint64_t size) {
 
   // if there are no free memory areas, return
   if (free_memory_area_index == 0) {
@@ -165,6 +211,135 @@ int allocate_area(multiboot_uint64_t size) {
   return -3;
 }
 
+int allocate_area(multiboot_uint64_t start, multiboot_uint64_t size) {
+
+  // if the array is empty, return false
+  if (free_memory_area_index == 0) {
+    // printf("Array is empty\n");
+
+    return -1;
+  }
+
+  // if someone wants to remove a free memory area of size 0, return
+  if (size == 0) {
+    // printf("Size is zero\n");
+
+    return -2;
+  }
+
+  // printf("Looking for overlap\n");
+
+  // find the first free area that overlaps
+  int current_area_index = -1;
+  multiboot_uint64_t current_area_end = -1;
+  multiboot_uint64_t current_area_start = -1;
+  memory_area_t *current_area;
+  for (int i = 0; i < free_memory_area_index; i++) {
+
+    current_area = &free_memory_areas[i];
+
+    current_area_start = current_area->start;
+    current_area_end = current_area->start + current_area->size - 1;
+
+    if (start > current_area_end) {
+      continue;
+    }
+
+    current_area_index = i;
+    break;
+  }
+
+  // returned area does not overlap with any free area!
+  if (current_area_index == -1) {
+    return -3;
+  }
+
+  // printf("found overlap\n");
+
+  multiboot_uint64_t end = start + size - 1;
+
+  // printf("[%d, %d] [%d, %d]\n", current_area_start, current_area_end, start,
+  //     end);
+
+  if (current_area_start == start && current_area_end > end) {
+
+    // printf("truly larger");
+
+    // case: overlap at start + free area is truly larger than allocated area
+
+    // make the area smaller from the start
+    current_area->start += size;
+    current_area->size -= size;
+
+    return 0;
+  }
+
+  if (current_area_start < start && current_area_end == end) {
+
+    // printf("truly smaller");
+
+    // case: overlap at end + free area is truly larger than allocated area
+
+    // make the area smaller from the end
+    current_area->size -= size;
+
+    return 0;
+  }
+
+  if (current_area_start == start && current_area_end == end) {
+
+    // printf("complete overlap");
+
+    // case: areas are equal, the free area is erased
+
+    for (int i = current_area_index; i < free_memory_area_index; i++) {
+
+      free_memory_areas[i].start = free_memory_areas[i + 1].start;
+      free_memory_areas[i].size = free_memory_areas[i + 1].size;
+    }
+
+    free_memory_area_index--;
+
+    return 0;
+  }
+
+  if (current_area_start < start && current_area_end > end) {
+
+    // printf("complete enclosed, split in two\n");
+
+    // check if there is enough space to take up another area which is created
+    // by the split
+    if (free_memory_area_index == MAX_MEMORY_AREAS_SIZE) {
+
+      return -4;
+    }
+
+    // make the current area smaller
+    multiboot_uint64_t original_size = current_area->size;
+    current_area->size = start - current_area->start;
+
+    // shift to the right
+    for (int i = free_memory_area_index; i > current_area_index; i--) {
+
+      free_memory_areas[i].start = free_memory_areas[i - 1].start;
+      free_memory_areas[i].size = free_memory_areas[i - 1].size;
+    }
+
+    // insert the second part of the split area
+    free_memory_areas[current_area_index + 1].start = end + 1;
+    free_memory_areas[current_area_index + 1].size =
+        original_size - size - current_area->size;
+
+    free_memory_area_index++;
+
+    return 0;
+  }
+
+  // printf("No case matches!\n");
+
+  return -5;
+}
+
 // TODO: if two areas exactly are next to each other, merge them, shift the
 // records down
 // TODO: if two areas are connected by an inserted area, merge all three areas,
@@ -183,11 +358,17 @@ int insert_area(multiboot_uint64_t start, multiboot_uint64_t size) {
 
   // assumption: array is sorted: go through and find the correct index
 
+  // printf("A free_memory_area_index: %d\n", free_memory_area_index);
+
   unsigned int correct_index = 0;
   while (start > free_memory_areas[correct_index].start &&
          correct_index < free_memory_area_index) {
     correct_index++;
   }
+
+  // printf("correct_index: %d\n", correct_index);
+
+  // printf("B free_memory_area_index: %d\n", free_memory_area_index);
 
   // printf("correct_index: %d\n", correct_index);
 
@@ -210,6 +391,9 @@ int insert_area(multiboot_uint64_t start, multiboot_uint64_t size) {
     }
   }
 
+  // printf("C free_memory_area_index: %d\n", free_memory_area_index);
+  // printf("correct_index: %d\n", correct_index);
+
   // printf("no collision\n");
 
   // merge with predecessor
@@ -222,6 +406,7 @@ int insert_area(multiboot_uint64_t start, multiboot_uint64_t size) {
     if (pred_end + 1 == start) {
 
       // printf("shared edge successor\n");
+      // printf("merge with successor\n");
 
       // make the successor larger
       free_memory_areas[correct_index - 1].size += size;
@@ -234,6 +419,7 @@ int insert_area(multiboot_uint64_t start, multiboot_uint64_t size) {
       if (free_memory_areas[correct_index].start == end + 1) {
 
         // printf("shared edge predecessor\n");
+        // printf("merge with predecessor\n");
 
         // make the predecessor even larger
         free_memory_areas[correct_index - 1].size +=
@@ -244,41 +430,52 @@ int insert_area(multiboot_uint64_t start, multiboot_uint64_t size) {
 
           free_memory_areas[i].start = free_memory_areas[i + 1].start;
           free_memory_areas[i].size = free_memory_areas[i + 1].size;
-
-          free_memory_area_index--;
         }
+
+        // printf("decrement\n");
+        free_memory_area_index--;
       }
 
       return 0;
     }
   }
 
+  // printf("D free_memory_area_index: %d\n", free_memory_area_index);
+
   // merge with succesor
   // if the successor shares an edge with the predecessor, merge and shift
   if (free_memory_areas[correct_index].start == (start + size)) {
+
+    // printf("merge with succesor\n");
 
     // make the successor larger
     free_memory_areas[correct_index].start = start;
     free_memory_areas[correct_index].size += size;
 
+    // // shift all content toward the end
+    // for (int i = free_memory_area_index + 1; i > correct_index; i--) {
+
+    //   // printf("shift\n");
+
+    //   free_memory_areas[i].start = free_memory_areas[i - 1].start;
+    //   free_memory_areas[i].size = free_memory_areas[i - 1].size;
+    // }
+
     return 0;
   }
 
-  // shift all content toward the end
-  for (int i = free_memory_area_index + 1; i > correct_index; i--) {
+  // printf("E free_memory_area_index: %d\n", free_memory_area_index);
 
-    // printf("shift\n");
-
-    free_memory_areas[i].start = free_memory_areas[i - 1].start;
-    free_memory_areas[i].size = free_memory_areas[i - 1].size;
-  }
+  // printf("F free_memory_area_index: %d\n", free_memory_area_index);
 
   // insert
   free_memory_areas[correct_index].start = start;
   free_memory_areas[correct_index].size = size;
 
   // increase free_memory_area_index
+  // printf("increment %d to ", free_memory_area_index);
   free_memory_area_index++;
+  // printf("%d\n", free_memory_area_index);
 
   return 0;
 }

@@ -47,7 +47,7 @@ if (insert_area(3000, 9000))
 // allocate a 100 byte block
 // if the allocation fails for any reason the return value is a negative error code
 // if the allocation succeeds, the return value is the address at which the memory is available for the caller
-int address = allocate_area(100)
+int address = allocate_area(100);
 if (address < 0)
 {
   printf("Allocating memory failed!");
@@ -85,7 +85,8 @@ unsigned int memory_areas_size();
 int insert_area(multiboot_uint64_t, multiboot_uint64_t);
 
 // output the map
-void dump_free_memory_map();
+void k_dump_free_memory_map();
+// void dump_free_memory_map();
 
 // Tries to find the lowest of the free areas, that can completely satisfy the
 // request for the amount of bytes to allocate and reduces the size of this free
@@ -94,7 +95,25 @@ void dump_free_memory_map();
 // RETURN VALUE: If the allocation fails for any reason the return value is a
 // negative error code. If the allocation succeeds, the return value is the
 // address at which the memory is available for the caller
-int allocate_area(multiboot_uint64_t size);
+int allocate(multiboot_uint64_t size);
+
+// given a start and a size, allocate that area of RAM
+//
+// Cases:
+// 1. Used area does not overlap with any free area --> error
+// 2. Used area does overlap with a free area but is too large for the free area
+// --> error
+// 3. Used area aligns exactly with the start of a free area --> makes the free
+// area smaller at the start
+// 4. Used area aligns exactly with the end of a free area --> makes the free
+// area smaller at the end
+// 5. Used area is exactly as large as a free area. --> The free area completely
+// is removed from the array
+// 6. Used area splits a free area into two peaces --> the array uses up a new
+// element and has enough space --> ok
+// 7. Used area splits a free area into two peaces --> the array uses up a new
+// element and DOES NOT HAVE enough space --> error
+int allocate_area(multiboot_uint64_t start, multiboot_uint64_t size);
 
 // retrieve an amount of bytes
 // - search the lowest memory area that is large enough

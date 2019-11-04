@@ -272,13 +272,13 @@ void k_print_float(float data) {
 
   int float_part = temp;
 
-  printf("int %d frac %d\n", int_part, float_part);
+  // printf("int %d frac %d\n", int_part, float_part);
 
   k_itoa(int_part_buf, 10, int_part);
   k_itoa(fraction_part_buf, 10, float_part);
 
-  printf("int_part_buf %s\n", int_part_buf);
-  printf("fraction_part_buf %s\n", fraction_part_buf);
+  // printf("int_part_buf %s\n", int_part_buf);
+  // printf("fraction_part_buf %s\n", fraction_part_buf);
 
   char total_buf[41];
   int total_buf_index = 0;
@@ -286,7 +286,7 @@ void k_print_float(float data) {
     total_buf[i] = 0;
   }
 
-  printf("inserting int part\n");
+  // printf("inserting int part\n");
 
   // insert the integral part of the floating point number into the full array
   for (int i = 0; i < 20; i++) {
@@ -299,12 +299,12 @@ void k_print_float(float data) {
     total_buf_index++;
   }
 
-  printf("inserting dot\n");
+  // printf("inserting dot\n");
 
   total_buf[total_buf_index] = '.';
   total_buf_index++;
 
-  printf("inserting frac part\n");
+  // printf("inserting frac part\n");
 
   // insert the fractional part of the floating point number into the full array
   for (int i = 0; i < 20; i++) {
@@ -317,15 +317,15 @@ void k_print_float(float data) {
     total_buf_index++;
   }
 
-  printf("output total_buf_index %d\n", total_buf_index);
+  // printf("output total_buf_index %d\n", total_buf_index);
 
-  printf("float %s\n", total_buf);
+  // printf("float %s\n", total_buf);
 
   // k_putchar segfaults during mockito tests because it accesses video memory
   // which is off limits for cmockito user space applications on modern linux
   // systems with paging enabled!
 
-  // for (int i = 0; i <= total_buf_index; i++) {
-  //   k_putchar(total_buf[i]);
-  // }
+  for (int i = 0; i <= total_buf_index; i++) {
+    k_putchar(total_buf[i]);
+  }
 }
