@@ -873,9 +873,329 @@ void test_dump() {
   assert_int_equal(0,
                    insert_area(1024 * 1024 * 2.0f, 1024 * 1024 * 1024 * 1.5f));
 
-  // k_print_float(123.456f);
+  // dump_free_memory_map();
+}
 
-  dump_free_memory_map();
+void test_allocate_area_cover_no_free_area() {
+
+  clear_placement_memory_array();
+
+  // there is no memory area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // allocate
+  assert_int_equal(0, allocate_area_cover(0, 1000));
+
+  // there is still no free area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // dump_free_memory_map();
+}
+
+void test_allocate_area_cover_no_intersection_withs_free_area() {
+
+  clear_placement_memory_array();
+
+  // there is no memory area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // insert a free 100 byte block at the start
+  assert_int_equal(0, insert_area(200, 100));
+
+  // there is one free area
+  assert_int_equal(1, free_memory_area_index);
+  assert_int_equal(1, memory_areas_size());
+
+  // allocate
+  assert_int_equal(0, allocate_area_cover(0, 100));
+
+  // there is still one free area
+  assert_int_equal(1, free_memory_area_index);
+  assert_int_equal(1, memory_areas_size());
+
+  // the free block is the same as before
+  assert_int_equal(200, free_memory_areas[0].start);
+  assert_int_equal(100, free_memory_areas[0].size);
+
+  // dump_free_memory_map();
+}
+
+void test_allocate_area_cover_aligns_at_start() {
+
+  clear_placement_memory_array();
+
+  // there is no memory area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // insert a free 100 byte block at the start
+  assert_int_equal(0, insert_area(100, 100));
+
+  // allocate a block that aligns with the start
+  assert_int_equal(0, allocate_area_cover(100, 50));
+
+  // there is still no free area
+  assert_int_equal(1, free_memory_area_index);
+  assert_int_equal(1, memory_areas_size());
+
+  // the free block got smaller at the start
+  assert_int_equal(150, free_memory_areas[0].start);
+  assert_int_equal(50, free_memory_areas[0].size);
+
+  // dump_free_memory_map();
+}
+
+void test_allocate_area_cover_before_start() {
+
+  clear_placement_memory_array();
+
+  // there is no memory area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // insert a free 100 byte block at the start
+  assert_int_equal(0, insert_area(100, 100));
+
+  // allocate a block that aligns with the start
+  assert_int_equal(0, allocate_area_cover(50, 100));
+
+  // there is still no free area
+  assert_int_equal(1, free_memory_area_index);
+  assert_int_equal(1, memory_areas_size());
+
+  // the free block got smaller at the start
+  assert_int_equal(150, free_memory_areas[0].start);
+  assert_int_equal(50, free_memory_areas[0].size);
+
+  // dump_free_memory_map();
+}
+
+void test_allocate_area_cover_aligns_at_end() {
+
+  clear_placement_memory_array();
+
+  // there is no memory area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // insert a free 100 byte block at the start
+  assert_int_equal(0, insert_area(100, 100)); // [100, 199]
+
+  // dump_free_memory_map();
+
+  // there is still no free area
+  assert_int_equal(1, free_memory_area_index);
+  assert_int_equal(1, memory_areas_size());
+
+  // allocate a block that aligns with the end
+  assert_int_equal(0, allocate_area_cover(150, 50)); // [150, 199]
+
+  // dump_free_memory_map();
+
+  // there is still no free area
+  assert_int_equal(1, free_memory_area_index);
+  assert_int_equal(1, memory_areas_size());
+
+  // the free block got smaller at the end [100, 149]
+  assert_int_equal(100, free_memory_areas[0].start);
+  assert_int_equal(50, free_memory_areas[0].size);
+
+  // dump_free_memory_map();
+}
+
+void test_allocate_area_cover_aligns_after_end() {
+
+  clear_placement_memory_array();
+
+  // there is no memory area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // insert a free 100 byte block at the start
+  assert_int_equal(0, insert_area(100, 100));
+
+  // allocate a block that aligns with the end
+  assert_int_equal(0, allocate_area_cover(150, 100));
+
+  // there is still no free area
+  assert_int_equal(1, free_memory_area_index);
+  assert_int_equal(1, memory_areas_size());
+
+  // the free block got smaller at the end
+  assert_int_equal(100, free_memory_areas[0].start);
+  assert_int_equal(50, free_memory_areas[0].size);
+
+  // dump_free_memory_map();
+}
+
+//
+void test_allocate_area_cover_start_and_end() {
+
+  clear_placement_memory_array();
+
+  // there is no memory area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // insert two 100 byte blocks
+  assert_int_equal(0, insert_area(100, 100)); // [100, 199]
+  assert_int_equal(0, insert_area(400, 100)); // [400, 499]
+
+  // dump_free_memory_map();
+
+  // there are two free memory areas
+  assert_int_equal(2, free_memory_area_index);
+  assert_int_equal(2, memory_areas_size());
+
+  // allocate a block that hits both aread in the middle
+  assert_int_equal(0, allocate_area_cover(150, 300)); // [150, 449]
+
+  // there are still two free areas
+  assert_int_equal(2, free_memory_area_index);
+  assert_int_equal(2, memory_areas_size());
+
+  // dump_free_memory_map();
+
+  // the free block got smaller at the end
+  assert_int_equal(100, free_memory_areas[0].start);
+  assert_int_equal(50, free_memory_areas[0].size);
+
+  assert_int_equal(450, free_memory_areas[1].start);
+  assert_int_equal(50, free_memory_areas[1].size);
+
+  // dump_free_memory_map();
+}
+
+void test_allocate_area_cover_complete_coverage() {
+
+  clear_placement_memory_array();
+
+  // there is no memory area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // insert a free 100 byte block at the start
+  assert_int_equal(0, insert_area(100, 100)); // [100, 199]
+  assert_int_equal(0, insert_area(300, 100)); // [300, 399]
+  assert_int_equal(0, insert_area(500, 100)); // [500, 599]
+  assert_int_equal(0, insert_area(700, 100)); // [700, 799]
+
+  // there are two free memory areas
+  assert_int_equal(4, free_memory_area_index);
+  assert_int_equal(4, memory_areas_size());
+
+  // allocate a block that covers three of the four areas completely
+  assert_int_equal(0, allocate_area_cover(0, 650));
+
+  // there is still one area left
+  assert_int_equal(1, free_memory_area_index);
+  assert_int_equal(1, memory_areas_size());
+
+  // the free block got smaller at the end
+  assert_int_equal(700, free_memory_areas[0].start);
+  assert_int_equal(100, free_memory_areas[0].size);
+
+  // dump_free_memory_map();
+}
+
+void test_allocate_area_cover_over_end() {
+
+  clear_placement_memory_array();
+
+  // there is no memory area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // insert a free 100 byte block at the start
+  assert_int_equal(0, insert_area(100, 100));
+  assert_int_equal(0, insert_area(400, 100));
+
+  // there are two free memory areas
+  assert_int_equal(2, free_memory_area_index);
+  assert_int_equal(2, memory_areas_size());
+
+  // allocate a block that hits both aread in the middle
+  assert_int_equal(0, allocate_area_cover(150, 1000));
+
+  // one of the areas was consumed
+  assert_int_equal(1, free_memory_area_index);
+  assert_int_equal(1, memory_areas_size());
+
+  // the free block got smaller at the end
+  assert_int_equal(100, free_memory_areas[0].start);
+  assert_int_equal(50, free_memory_areas[0].size);
+
+  // dump_free_memory_map();
+}
+
+void test_allocate_area_cover_over_start() {
+
+  clear_placement_memory_array();
+
+  // there is no memory area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // insert a free 100 byte block at the start
+  assert_int_equal(0, insert_area(100, 100));
+  assert_int_equal(0, insert_area(400, 100));
+
+  // there are two free memory areas
+  assert_int_equal(2, free_memory_area_index);
+  assert_int_equal(2, memory_areas_size());
+
+  // allocate a block that hits both aread in the middle
+  assert_int_equal(0, allocate_area_cover(0, 450));
+
+  // one of the areas was consumed
+  assert_int_equal(1, free_memory_area_index);
+  assert_int_equal(1, memory_areas_size());
+
+  // the free block got smaller at the end
+  assert_int_equal(450, free_memory_areas[0].start);
+  assert_int_equal(50, free_memory_areas[0].size);
+
+  // dump_free_memory_map();
+}
+
+void test_allocate_area_cover_split() {
+
+  clear_placement_memory_array();
+
+  // there is no memory area
+  assert_int_equal(0, free_memory_area_index);
+  assert_int_equal(0, memory_areas_size());
+
+  // insert a free 100 byte block at the start
+  assert_int_equal(0, insert_area(0, 100));
+
+  // there are two free memory areas
+  assert_int_equal(1, free_memory_area_index);
+  assert_int_equal(1, memory_areas_size());
+
+  // dump_free_memory_map();
+
+  // allocate a block that hits both aread in the middle
+  assert_int_equal(0, allocate_area_cover(50, 10));
+
+  // dump_free_memory_map();
+
+  // the one area was split into two
+  assert_int_equal(2, free_memory_area_index);
+  assert_int_equal(2, memory_areas_size());
+
+  // [0, 49]
+  assert_int_equal(0, free_memory_areas[0].start);
+  assert_int_equal(50, free_memory_areas[0].size);
+
+  // [60, 99]
+  assert_int_equal(60, free_memory_areas[1].start);
+  assert_int_equal(40, free_memory_areas[1].size);
+
+  // dump_free_memory_map();
 }
 
 // clang-format off
@@ -923,8 +1243,18 @@ int main(int argc, char **argv) {
       unit_test(test_allocate_area_completely_overlaps_free_area),
       unit_test(test_allocate_area_split_free_area_no_space_left),
       unit_test(test_allocate_area_split_free_area_space_left),
-
       unit_test(test_random_data),
+      unit_test(test_allocate_area_cover_no_free_area),
+      unit_test(test_allocate_area_cover_no_intersection_withs_free_area),
+      unit_test(test_allocate_area_cover_aligns_at_start),
+      unit_test(test_allocate_area_cover_before_start),
+      unit_test(test_allocate_area_cover_aligns_at_end),
+      unit_test(test_allocate_area_cover_aligns_after_end),
+      unit_test(test_allocate_area_cover_start_and_end),
+      unit_test(test_allocate_area_cover_complete_coverage),
+      unit_test(test_allocate_area_cover_over_end),
+      unit_test(test_allocate_area_cover_over_start),
+      unit_test(test_allocate_area_cover_split),
 
       //unit_test(test_dump),
   };

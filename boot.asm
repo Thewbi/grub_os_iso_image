@@ -20,5 +20,6 @@ start:
         hlt                      ; halt the CPU
 
 section .bss
-resb 8192                        ; 8KB for stack
-stack_space:
+resb 8192                        ; 8KB for stack at the start of the bss section
+stack_space:                     ; this label points to the upper bound of the area reserved for the stack
+                                 ; this upper bound is loaded into esp a few lines above (mov esp, stack_space).

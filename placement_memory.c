@@ -54,6 +54,7 @@ unsigned int memory_areas_size() {
 
 int is_free(memory_area_t *area) { return area->size == 0 && area->start == 0; }
 
+/**/
 // Outputs the free areas in the memory map
 void k_dump_free_memory_map() {
 
@@ -150,8 +151,7 @@ void dump_free_memory_map() {
     printf("%.2f ", size);
     printf("%s\n", unit);
   }
-}
-*/
+}*/
 
 // find the first block in the list that is large enough to contain the size of
 // bytes requested. Reduce this block by the amount of bytes requested.
@@ -338,6 +338,97 @@ int allocate_area(multiboot_uint64_t start, multiboot_uint64_t size) {
   // printf("No case matches!\n");
 
   return -5;
+}
+
+int allocate_area_cover(multiboot_uint64_t start, multiboot_uint64_t size) {
+
+  // find first area it intersects with
+
+  // if there is no such area -> check if there is a array element left for a
+  // new area, insert new area,
+  // shift to the right if necessary, increment free_memory_area_index, done
+
+  // if there is a first area, enlarge that first area IF NECESSARRY so it
+  // starts at start find all subsequent covered areas and merge them with the
+  // first delete merged areas by shifting to the left decrement
+  // free_memory_area_index
+
+  multiboot_uint64_t end = start + size - 1;
+
+  if (free_memory_area_index == 0) {
+    return 0;
+  }
+
+  memory_area_t *current_area;
+
+  for (int i = 0; i < free_memory_area_index; i++) {
+
+    current_area = &free_memory_areas[i];
+
+    multiboot_uint64_t current_area_start = current_area->start;
+    multiboot_uint64_t current_area_end =
+        current_area->start + current_area->size - 1;
+    multiboot_uint64_t current_area_size = current_area->size;
+
+    // as long as this area does not intersect, go to the next area
+    if (current_area_end < start || current_area_start > end) {
+      continue;
+    }
+
+    if (start <= current_area_start && end >= current_area_end) {
+
+      // case: this area is completely covered
+
+      // move everything to the left
+      for (int j = i; j < free_memory_area_index; j++) {
+
+        free_memory_areas[j].start = free_memory_areas[j + 1].start;
+        free_memory_areas[j].size = free_memory_areas[j + 1].size;
+      }
+
+      i--;
+      free_memory_area_index--;
+
+    } else if (start <= current_area_start && end < current_area_end) {
+
+      // case: overlap at the start
+
+      free_memory_areas[i].start = end + 1;
+      free_memory_areas[i].size =
+          current_area_end - free_memory_areas[i].start + 1;
+
+    } else if (start > current_area_start && end >= current_area_end) {
+
+      // case: overlap at the end
+
+      free_memory_areas[i].size = start - free_memory_areas[i].start;
+
+    } else if (start > current_area_start && end < current_area_end) {
+
+      if (free_memory_area_index == MAX_MEMORY_AREAS_SIZE) {
+        return -1;
+      }
+
+      // case: splits an area into two
+
+      // first area is created from the current entry
+      free_memory_areas[i].size = start - free_memory_areas[i].start;
+
+      // move everything to the right
+      for (int j = free_memory_area_index; j > i; j--) {
+
+        free_memory_areas[j].start = free_memory_areas[j - 1].start;
+        free_memory_areas[j].size = free_memory_areas[j - 1].size;
+      }
+
+      free_memory_area_index++;
+
+      free_memory_areas[i + 1].start = end + 1;
+      free_memory_areas[i + 1].size = current_area_end - end;
+    }
+  }
+
+  return 0;
 }
 
 // TODO: if two areas exactly are next to each other, merge them, shift the

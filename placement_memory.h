@@ -81,12 +81,12 @@ int overlapp(memory_area_t *lhs, memory_area_t *rhs);
 // returns the amount of free memory_areas
 unsigned int memory_areas_size();
 
-// inserts a area
+// inserts a free area
 int insert_area(multiboot_uint64_t, multiboot_uint64_t);
 
 // output the map
-void k_dump_free_memory_map();
-// void dump_free_memory_map();
+// void k_dump_free_memory_map();
+void dump_free_memory_map();
 
 // Tries to find the lowest of the free areas, that can completely satisfy the
 // request for the amount of bytes to allocate and reduces the size of this free
@@ -114,6 +114,11 @@ int allocate(multiboot_uint64_t size);
 // 7. Used area splits a free area into two peaces --> the array uses up a new
 // element and DOES NOT HAVE enough space --> error
 int allocate_area(multiboot_uint64_t start, multiboot_uint64_t size);
+
+// will allocate the entire area from start up to start+size.
+// If subsections of this area are already used, will allocate the holes in
+// between and merge sections.
+int allocate_area_cover(multiboot_uint64_t start, multiboot_uint64_t size);
 
 // retrieve an amount of bytes
 // - search the lowest memory area that is large enough
