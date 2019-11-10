@@ -4,6 +4,10 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+// this is a macro which calls the panic function and automatically
+// specifies the line and the file of the MACRO usage
+#define PANIC(msg) panic(msg, __FILE__, __LINE__);
+
 #define USIGNED_INT_MAX 0xFFFFFFFF
 
 // Some nice typedefs, to standardise sizes across platforms.
@@ -65,5 +69,7 @@ int k_strcmp(char *str1, char *str2);
 char *k_strcpy(char *dest, const char *src);
 char *k_strcat(char *dest, const char *src);
 void k_print_float(float data);
+
+extern void panic(const char *message, const char *file, u32int line);
 
 #endif // COMMON_H

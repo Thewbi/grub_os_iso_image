@@ -9,9 +9,30 @@
 #include "common.h"
 //#include "monitor.h"
 
+isr_t interrupt_handlers[256];
+
 // This gets called from our ASM interrupt handler stub.
 void isr_handler(registers_t regs) {
+
+  // if a handler is present
+  if (interrupt_handlers[regs.int_no] != 0) {
+
+    // retrieve the handler
+    isr_t handler = interrupt_handlers[regs.int_no];
+
+    // call the handler
+    handler(regs);
+
+  } else {
+
+    k_printf("I do not understand - isr.c - isr_handler()");
+  }
+
   // monitor_write("recieved interrupt: ");
   // monitor_write_dec(regs.int_no);
   // monitor_put('\n');
+}
+
+void register_interrupt_handler(u8int n, isr_t handler) {
+  interrupt_handlers[n] = handler;
 }

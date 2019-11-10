@@ -2,12 +2,12 @@
 
 int process_multiboot_memory_map(multiboot_info_t *mbi) {
 
-  k_printf("Reading Memory Map ...\n");
+  // k_printf("Reading Memory Map ...\n");
 
   // Are mmap_* valid?
   if (!CHECK_FLAG(mbi->flags, 6)) {
 
-    k_printf("No Memory Map found ...\n");
+    // k_printf("No Memory Map found ...\n");
     return -1;
   }
 
@@ -21,9 +21,9 @@ int process_multiboot_memory_map(multiboot_info_t *mbi) {
        mmap = (memory_map_t *)((unsigned long)mmap + mmap->size +
                                sizeof(mmap->size))) {
 
-    k_printf("base_addr = 0x%x%x, length = 0x%x%x, type = 0x%x\n",
-             mmap->base_addr_high, mmap->base_addr_low, mmap->length_high,
-             mmap->length_low, mmap->type);
+    // k_printf("base_addr = 0x%x%x, length = 0x%x%x, type = 0x%x\n",
+    //          mmap->base_addr_high, mmap->base_addr_low, mmap->length_high,
+    //          mmap->length_low, mmap->type);
 
     // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-modules
     //
@@ -55,7 +55,7 @@ int process_multiboot_memory_map(multiboot_info_t *mbi) {
 
       if (insert_area(start, size)) {
 
-        k_printf("Inserting free memory area failed!\n");
+        // k_printf("Inserting free memory area failed!\n");
         return -2;
       }
 
@@ -102,7 +102,7 @@ int process_multiboot_memory_map(multiboot_info_t *mbi) {
 
   // dump_free_memory_map();
 
-  k_printf("Reading Memory Map done.\n");
+  // k_printf("Reading Memory Map done.\n");
 
   return 0;
 }

@@ -161,25 +161,25 @@ void dump_free_memory_map() {
 // -> Shift all blocks after the removed one down a position.
 //
 // Special Case: Does not fit into any available block
-int allocate(multiboot_uint64_t size) {
+multiboot_uint64_t allocate(multiboot_uint64_t size) {
 
   // if there are no free memory areas, return
   if (free_memory_area_index == 0) {
-    return -1;
+    return 0;
   }
 
   // if someone wants to allocate a memory area of size 0, return
   if (size == 0) {
-    return -2;
+    return 0;
   }
 
   // iterate over all free memory areas and find one that is large enought to
   // satisfy the request
-  for (int i = 0; i < free_memory_area_index; i++) {
+  for (unsigned int i = 0; i < free_memory_area_index; i++) {
 
     if (free_memory_areas[i].size > size) {
 
-      int allocation_start = free_memory_areas[i].start;
+      multiboot_uint64_t allocation_start = free_memory_areas[i].start;
 
       // move the start of this area back to allocate the memory at the lowest
       // location possible
@@ -191,7 +191,7 @@ int allocate(multiboot_uint64_t size) {
 
     } else if (free_memory_areas[i].size == size) {
 
-      int allocation_start = free_memory_areas[i].start;
+      multiboot_uint64_t allocation_start = free_memory_areas[i].start;
 
       // remove this free memory area
       for (int j = i; j < free_memory_area_index; j++) {
@@ -208,7 +208,7 @@ int allocate(multiboot_uint64_t size) {
   }
 
   // request for memory cannot be satisfied
-  return -3;
+  return 0;
 }
 
 int allocate_area(multiboot_uint64_t start, multiboot_uint64_t size) {

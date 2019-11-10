@@ -329,3 +329,21 @@ void k_print_float(float data) {
     k_putchar(total_buf[i]);
   }
 }
+
+extern void panic(const char *message, const char *file, u32int line) {
+
+  // We encountered a massive problem and have to stop.
+  __asm__ __volatile__("cli"); // Disable interrupts.
+
+  k_printf("PANIC(");
+  k_printf(message);
+  k_printf(") at ");
+  k_printf(file);
+  k_printf(":");
+  k_printf(line);
+  k_printf("\n");
+
+  // Halt by going into an infinite loop.
+  for (;;)
+    ;
+}

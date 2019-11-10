@@ -14,6 +14,7 @@ void bubblesort(const void *data, unsigned int element_count, unsigned int eleme
 
 // standard implementations for an array of int
 int int_comparator(const void *lhs_void_ptr, const void *rhs_void_ptr);
+
 void int_swap(const void *data, unsigned int i, unsigned int j);
 
 void quicksort(const void *data, unsigned int element_count,

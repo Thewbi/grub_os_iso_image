@@ -2,6 +2,7 @@
 #define PLACEMENT_MEMORY_H
 
 #include "common.h"
+#include "types.h"
 
 // clang-format off
 
@@ -59,8 +60,10 @@ if (address < 0)
 // clang-format on
 
 #define MAX_MEMORY_AREAS_SIZE 10
+#define PLACEMENT_MEMORY_SIZE_IN_BYTES 5 * 1024 * 1024
 
-typedef unsigned long long multiboot_uint64_t;
+// current placement memory pointer
+multiboot_uint64_t placement_memory;
 
 // used to describe memory areas
 typedef struct memory_area {
@@ -95,7 +98,7 @@ void dump_free_memory_map();
 // RETURN VALUE: If the allocation fails for any reason the return value is a
 // negative error code. If the allocation succeeds, the return value is the
 // address at which the memory is available for the caller
-int allocate(multiboot_uint64_t size);
+multiboot_uint64_t allocate(multiboot_uint64_t size);
 
 // given a start and a size, allocate that area of RAM
 //

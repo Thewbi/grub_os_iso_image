@@ -99,7 +99,7 @@ static void test_kalloc_none_free() {
   clear_placement_memory_array();
 
   // request 100 bytes, this will fail because there is nothing free
-  assert_int_equal(-1, allocate(100));
+  assert_int_equal(0, allocate(100));
 }
 
 // Test the allocation on a completely free area
@@ -112,7 +112,7 @@ static void test_kalloc_zero() {
   assert_int_equal(0, insert_area(0, 1000));
 
   // request 100 bytes, this will fail because there is nothing free
-  assert_int_equal(-2, allocate(0));
+  assert_int_equal(0, allocate(0));
 }
 
 // Test the allocation on a completely free area
@@ -231,7 +231,7 @@ static void test_kalloc_not_enough_memory() {
   assert_int_equal(1000, free_memory_areas[0].size);
 
   // request 2000 bytes. This amount of memory cannot be served!
-  assert_int_equal(-3, allocate(2000));
+  assert_int_equal(0, allocate(2000));
 
   // there is only a single memory area
   assert_int_equal(1, free_memory_area_index);

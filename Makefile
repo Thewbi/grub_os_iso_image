@@ -24,7 +24,7 @@ bootloader: boot.asm
 	nasm -f elf32 interrupt.asm -o interrupt.o
 	nasm -f elf32 gdt.asm -o gdt.o
 
-kernel: kernel.c placement_memory.c isr.c descriptor_tables.c common.c memory_map.c stack.c
+kernel: kernel.c placement_memory.c isr.c descriptor_tables.c common.c memory_map.c stack.c bitmap.c
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c kernel.c -o kernel.o
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c placement_memory.c -o placement_memory.o
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c isr.c -o isr.o
@@ -32,8 +32,9 @@ kernel: kernel.c placement_memory.c isr.c descriptor_tables.c common.c memory_ma
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c common.c -o common.o
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c memory_map.c -o memory_map.o
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c stack.c -o stack.o
+	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c bitmap.c -o bitmap.o
 
-linker: linker.ld boot.o kernel.o placement_memory.o isr.o gdt.o interrupt.o descriptor_tables.o common.o memory_map.o stack.o
+linker: linker.ld boot.o kernel.o placement_memory.o isr.o gdt.o interrupt.o descriptor_tables.o common.o memory_map.o stack.o bitmap.o
 	$(LD) -m elf_i386 -T linker.ld -o kernel \
 	boot.o \
 	kernel.o \
@@ -44,7 +45,8 @@ linker: linker.ld boot.o kernel.o placement_memory.o isr.o gdt.o interrupt.o des
 	descriptor_tables.o \
 	common.o \
 	memory_map.o \
-	stack.o
+	stack.o \
+	bitmap.o
 
 iso: kernel
 	$(MKDIR) $(GRUB_PATH)
