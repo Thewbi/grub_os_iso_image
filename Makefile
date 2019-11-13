@@ -61,4 +61,4 @@ modules:
 
 .PHONY: clean
 clean:
-	$(RM) *.o $(BIN) *iso
+	$(RM) *.o $(BIN) *iso image.img

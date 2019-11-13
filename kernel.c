@@ -263,18 +263,24 @@ void main(unsigned long magic, unsigned long addr) {
   // of the first free entry in the placement memory table
   // mark the first 15 MB of ram used in the bitmap of frames
   reset_bitmap(bitmap, BITMAP_ELEMENT_COUNT);
-  if (use_frames_in_mb(bitmap, BITMAP_ELEMENT_COUNT,
-                       RESERVED_MEMORY_IN_BYTES +
-                           PLACEMENT_MEMORY_SIZE_IN_BYTES)) {
 
+  // k_printf("First element: %d\n", bitmap[0]);
+  // k_printf("%d\n", next_free_frame_index(bitmap, BITMAP_ELEMENT_COUNT));
+
+  if (use_frames_in_bytes(bitmap, BITMAP_ELEMENT_COUNT,
+                          RESERVED_MEMORY_IN_BYTES +
+                              PLACEMENT_MEMORY_SIZE_IN_BYTES)) {
     k_printf("Setting up the bitmap failed!\n");
 
     return;
   }
 
-  k_printf("Paging Setup ...\n");
+  // k_printf("First element: %d\n", bitmap[0]);
+  // k_printf("%d\n", next_free_frame_index(bitmap, BITMAP_ELEMENT_COUNT));
 
-  k_printf("Reset page directory ...\n");
+  // k_printf("Paging Setup ...\n");
+
+  // k_printf("Reset page directory ...\n");
 
   // uint32_t page_directory[1024] __attribute__((aligned(4096)));
   // uint32_t page_directory[1024];
@@ -287,18 +293,17 @@ void main(unsigned long magic, unsigned long addr) {
   paging_ptr =
       allocate_frame_aligned(&placement_memory_address, ((4 + 1) * 1024 * 4));
 
-  k_printf("paging_ptr: %d\n", paging_ptr);
+  // k_printf("paging_ptr: %d\n", paging_ptr);
 
   uint32_t *page_directory_ptr = 0;
   page_directory_ptr = paging_ptr;
 
-  k_printf("page_directory_ptr: %d\n", page_directory_ptr);
+  // k_printf("page_directory_ptr: %d\n", page_directory_ptr);
 
   // set each entry to not present
-  int i;
-  for (i = 0; i < 1024; i++) {
-
+  for (int i = 0; i < 1024; i++) {
     // This sets the following flags to the pages:
+    //
     //   * Supervisor: Only kernel-mode can access them
     //   (If the bit is set,
     //   then the page may be accessed by all;
@@ -308,22 +313,25 @@ void main(unsigned long magic, unsigned long addr) {
     //   * Write Enabled: It can be both read from
     //   and written to
     //
-    //   * Not Present: The page table is not present
+    //   * Present: The page table is not present because the last bit (P) is 0
     page_directory_ptr[i] = 0x00000002;
   }
 
-  k_printf("Reset page directory done.\n");
+  // k_printf("Reset page directory done.\n");
 
-  k_printf("Applying recursive trick to page directory ...\n");
+  // k_printf("Applying recursive trick to page directory ...\n");
 
   // last entry stores address of the table
   page_directory_ptr[1023] = page_directory_ptr;
 
-  k_printf("page_directory_ptr[1023]: %d\n", page_directory_ptr[1023]);
+  // set the present flag otherwise the MMU will signal a page fault
+  page_directory_ptr[1023] |= 1;
 
-  k_printf("Applying recursive trick to page directory done.\n");
+  // k_printf("page_directory_ptr[1023]: %d\n", page_directory_ptr[1023]);
 
-  k_printf("Initializing page tables ...\n");
+  // k_printf("Applying recursive trick to page directory done.\n");
+
+  // k_printf("Initializing page tables ...\n");
 
   unsigned int page_table_count = 4;
   // uint32_t page_tables[1024 * page_table_count]
@@ -342,7 +350,7 @@ void main(unsigned long magic, unsigned long addr) {
   // pages to. in this case, we want to map these pages to the very
   // beginning of memory.
 
-  // we will fill all 1024*page_table_count entries in each
+  // we will fill all 1024 * page_table_count entries in each
   // page table, mapping 4*page_table_count megabytes
   for (unsigned int i = 0; i < 1024 * page_table_count; i++) {
 
@@ -354,23 +362,29 @@ void main(unsigned long magic, unsigned long addr) {
     page_tables_ptr[i] = (i * 0x1000) | 3;
   }
 
-  k_printf("Initializing page tables done.\n");
+  // k_printf("Initializing page tables done.\n");
 
-  k_printf("Applying recursive trick to page tables ...\n");
+  // k_printf("Applying recursive trick to page tables ...\n");
 
   uint32_t *tempA = page_tables_ptr;
   for (unsigned int i = 0; i < page_table_count; i++) {
 
     // last entry stores address of the table
     page_tables_ptr[i * 1024 + 1023] = tempA;
+
+    // the Present bit has to be set, otherwise the MMU will signal a page fault
+    page_tables_ptr[i * 1024 + 1023] |= 1;
+
+    // increment the address by sizeof(uint32_t) * 1024 = 4 * 1024 = 4K bytes
     tempA += 1024;
 
-    k_printf("page_tables_ptr[1023]: %d\n", page_tables_ptr[i * 1024 + 1023]);
+    // k_printf("page_tables_ptr[1023]: %d\n", page_tables_ptr[i * 1024 +
+    // 1023]);
   }
 
-  k_printf("Applying recursive trick to page tables done.\n");
+  // k_printf("Applying recursive trick to page tables done.\n");
 
-  k_printf("Inserting page tables int page directory ...\n");
+  // k_printf("Inserting page tables int page directory ...\n");
 
   // put page tables into the page directory
   uint32_t *temp = page_tables_ptr;
@@ -381,18 +395,16 @@ void main(unsigned long magic, unsigned long addr) {
     page_directory_ptr[i] |= 3;
 
     // increment to next page_table
-    k_printf("temp: %d\n", temp);
-    k_printf("page_directory_ptr: %d\n", page_directory_ptr[i]);
+    // k_printf("temp: %d\n", temp);
+    // k_printf("page_directory_ptr: %d\n", page_directory_ptr[i]);
     temp += 1024;
 
     // k_printf("Address of page table: %d\n", page_directory_ptr[i]);
   }
 
-  k_printf("Inserting page tables int page directory done.\n");
+  // k_printf("Inserting page tables int page directory done.\n");
 
-  /**/
-
-  k_printf("Setting CR3 and CR0 ...\n");
+  // k_printf("Setting CR3 and CR0 ...\n");
 
   // put page directory into cr3
   // clang-format off
@@ -404,12 +416,12 @@ void main(unsigned long magic, unsigned long addr) {
 
   // clang-format on
 
-  k_printf("register page_fault_interrupt_handler ...\n");
+  // k_printf("register page_fault_interrupt_handler ...\n");
 
   // Before we enable paging, we must register our page fault handler.
   register_interrupt_handler(14, page_fault_interrupt_handler);
 
-  k_printf("register page_fault_interrupt_handler done.\n");
+  // k_printf("register page_fault_interrupt_handler done.\n");
 
   // We must set the 32th bit in the CR0 register,
   // the paging bit. This operation also requires
@@ -448,26 +460,248 @@ void main(unsigned long magic, unsigned long addr) {
 
   // clang-format on
 
-  k_printf("Setting CR3 and CR0 done.\n");
+  // k_printf("Setting CR3 and CR0 done.\n");
 
-  k_printf("Paging Setup done.\n");
+  // k_printf("Paging Setup done.\n");
 
   // k_dump_free_memory_map();
 
   unsigned long fact = factorial(10);
   k_printf("Factorial of 10: %d\n", fact);
 
-  u32int *ptr = 0;
-  u32int do_page_fault = 0;
+  // u32int *ptr = 0;
+  // u32int do_page_fault = 0;
 
-  ptr = (u32int *)0x00000000;
-  do_page_fault = *ptr;
+  u32int *ptr = (u32int *)0x00000000;
+  u32int do_page_fault = *ptr;
+
+  uint32_t virtual_address = 0xA0000000;
 
   // put a memory on a area of memory that is unmapped
-  ptr = (u32int *)0xA0000000;
+  ptr = (u32int *)virtual_address;
 
   // access that area which then causes a page fault
-  do_page_fault = *ptr;
+  // do_page_fault = *ptr;
+
+  // access the page directory while paging is on:
+  //
+  // 0xFFFFF000 is a virtual address that is managed by the last entry of
+  // the page directory. The first ten bits of 0xFFFFF000 are set to one, so
+  // it is managed by the last entry.
+  // Into this last entry, we wrote the physical address
+  // of where the page directory is placed in physical memory. So now the
+  // MMU is looking at the physical page table. The address 0xFFFFF000 also
+  // is taken care of by the last entry.
+  // Usually an entry in the page directory points to the address of a page
+  // table. Not in this special case! In this special case the physical address
+  // points to the page directory again instead of to some page table!
+  // The MMU now tries to resolve the next 10 bit in the address. The next
+  // 10 bit are set to 1 again, so that address points to the last entry in the
+  // page directory again! The last entry again points to the physical address
+  // of the page directory. The MMU performed the same loop twice and now points
+  // to the page directory.
+  page_directory_ptr = 0xFFFFF000;
+
+  // uint32_t page_directory_entry = page_directory_ptr[0];
+
+  // iterate over all entries except the last in the page directory and
+  // output the entries that are present
+  for (int i = 0; i < 1022; i++) {
+
+    uint32_t page_directory_entry = page_directory_ptr[i];
+
+    // bit 1 is set if the page entry is present in memory
+    if (page_directory_entry & 1) {
+
+      // k_printf("Page Directory Entry %d is present!\n", i);
+    }
+  }
+
+  // access a page at 3 Gigabyte of virtual RAM
+  //
+  // 0xA0000000 = 2684354560 d = 2560 MB
+
+  // for (int i = 0; i < BITMAP_ELEMENT_COUNT; i++) {
+
+  //   k_printf("%d\n", bitmap[i]);
+  // }
+
+  // find next free frame to house a page table
+  int page_table_frame_index =
+      next_free_frame_index(bitmap, BITMAP_ELEMENT_COUNT);
+
+  // k_printf("First free frame index: %d\n", page_table_frame_index);
+
+  if (page_table_frame_index < 0) {
+
+    k_printf("No free frames left!\n");
+
+  } else {
+
+    k_printf("First free frame index: %d\n", page_table_frame_index);
+
+    // set frame used
+    set(bitmap, BITMAP_ELEMENT_COUNT, page_table_frame_index, 1);
+
+    // compute physical address of frame
+    uint32_t *page_table_frame_address_physical =
+        page_table_frame_index * 0x1000;
+
+    // user wants to address this virtual address
+    // virtual_address += 0x2000;
+
+    // compute the index inside the page directory for the virtual_address
+    uint32_t page_directory_index = virtual_address / (4 * 1024 * 1024);
+    k_printf("page_directory_index: %d\n", page_directory_index);
+
+    // compute the index inside the page table for the virtual_address
+    uint32_t page_table_index =
+        (virtual_address % (4 * 1024 * 1024)) / (4 * 1024);
+    k_printf("page_table_index: %d\n", page_table_index);
+
+    k_printf("Retrieving page directory pointer...\n");
+
+    // this pointer lets us write into the page directory at the
+    // page directory entry that houses the new page table
+    // u32int *page_directory_ptr =
+    //     (u32int *)(0xFFFFF000 + page_directory_index * 0x400000);
+    u32int *page_directory_ptr =
+        (u32int *)(0xFFFFF000 + page_directory_index * 4);
+
+    k_printf("Retrieving page directory pointer done.!\n");
+
+    k_printf("Installing page directory entry ...\n");
+
+    // clear it
+    *page_directory_ptr = 0;
+    // put the physical address to the frame in that houses the page directory
+    *page_directory_ptr = page_table_frame_address_physical;
+    // mark it present
+    *page_directory_ptr |= 3;
+
+    k_printf("Installing page directory entry done.\n");
+
+    k_printf("Dumping page directory via the recursive trick...\n");
+
+    // compute the magic recursive address to the page table
+    // N.B: The page table is indexed via the page_directory_index,
+    // not the page_table_index!!!! page_directory_index is an index inside
+    // the page directory
+    // see https://medium.com/@connorstack/recursive-page-tables-ad1e03b20a85
+    u32int *herp = (u32int *)0xFFFFF000;
+
+    for (int i = 0; i < 1022; i++) {
+
+      uint32_t page_table_entry = herp[i];
+
+      // bit 1 is set if the page entry is present in memory
+      if (page_table_entry & 1) {
+
+        k_printf("Page Table Entry %d is present!\n", i);
+      }
+    }
+    k_printf("Dumping page directory via the recursive trick done.\n");
+
+    k_printf("Creating page table ...\n");
+
+    // here the page table is accessed before the recursive trick is applied
+    // which fortunately works without any issues ...
+    u32int *page_table_ptr =
+        (u32int *)(0xFFC00000 + page_directory_index * 0x1000);
+
+    // create a page table
+    // first initialize it and set each entry to "not present"
+    for (int i = 0; i < 1024; i++) {
+
+      // This sets the following flags to the pages:
+      //
+      //   * Supervisor: Only kernel-mode can access them
+      //   (If the bit is set,
+      //   then the page may be accessed by all;
+      //   if the bit is not set,however,
+      //   only the supervisor can access it.)
+      //
+      //   * Write Enabled: It can be both read from
+      //   and written to
+      //
+      //   * Present: The page table is not present because
+      //   the last bit (P) is 0
+      // page_table_frame_address_physical[i] = 0x00000002;
+      page_table_ptr[i] = 0x00000002;
+    }
+
+    // recursive trick for page table
+    page_table_ptr[1023] = page_table_frame_address_physical;
+
+    k_printf("Creating page table done.\n");
+
+    // find another free frame to put behind the page table entry and mark it
+    // used. This frame will actually store that data and the page table entry
+    // will point to it
+    int data_frame_index = next_free_frame_index(bitmap, BITMAP_ELEMENT_COUNT);
+    k_printf("Second free frame index: %d\n", data_frame_index);
+    set(bitmap, BITMAP_ELEMENT_COUNT, data_frame_index, 1);
+
+    // multiply the frame's inde in the bitmap with the size of a frame to
+    // compute a free physical memory address of that particular frame
+    uint32_t *data_frame_address_physical = data_frame_index * 0x1000;
+
+    // set the address to the data frame into the page table entry
+    page_table_ptr[page_table_index] = data_frame_address_physical;
+
+    // make the page table entry present
+    page_table_ptr[page_table_index] |= 1;
+
+    // k_printf("Dumping page table ...\n");
+    // for (int i = 0; i < 1022; i++) {
+
+    //   uint32_t page_table_entry = page_table_ptr[i];
+
+    //   // bit 1 is set if the page entry is present in memory
+    //   if (page_table_entry & 1) {
+
+    //     k_printf("Page Table Entry %d is present!\n", i);
+    //   }
+    // }
+    // k_printf("Dumping page table done.\n");
+
+    // compute the magic recursive address to the page table
+    // N.B: The page table is indexed via the page_directory_index,
+    // not the page_table_index!!!! page_directory_index is an index inside
+    // the page directory
+    // see https://medium.com/@connorstack/recursive-page-tables-ad1e03b20a85
+    u32int *derp = (u32int *)(0xFFC00000 + (page_directory_index * 0x1000));
+
+    k_printf("Dumping page table via the recursive trick...\n");
+
+    for (int i = 0; i < 1022; i++) {
+
+      uint32_t page_table_entry = derp[i];
+
+      // bit 1 is set if the page entry is present in memory
+      if (page_table_entry & 1) {
+
+        k_printf("Page Table Entry %d is present!\n", i);
+      }
+    }
+
+    k_printf("Dumping page table via the recursive trick done.\n");
+
+    k_printf("PageFault?\n");
+
+    // access that area which then causes a page fault
+    // put a memory on a area of memory that is unmapped
+    // ptr = (u32int *)0xA0000000;
+    // ptr = (u32int *)0xA0001000;
+    // ptr = (u32int *)0xA0002000;
+    ptr = (u32int *)virtual_address;
+
+    *ptr = 100;
+
+    do_page_fault = *ptr;
+
+    k_printf("StoredValue: %d\n", do_page_fault);
+  }
 
   // after main returns, program flow jumps back to boot.asm which executes hlt
   // to hlt the CPU
@@ -730,29 +964,43 @@ void page_fault_interrupt_handler(registers_t regs) {
   __asm__ __volatile__("mov %%cr2, %0" : "=r"(faulting_address));
 
   // The error code gives us details of what happened.
-  int present = !(regs.err_code & 0x1); // Page not present
-  int rw = regs.err_code & 0x2;         // Write operation?
-  int us = regs.err_code & 0x4;         // Processor was in user-mode?
-  int reserved =
-      regs.err_code & 0x8;       // Overwritten CPU-reserved bits of page entry?
-  int id = regs.err_code & 0x10; // Caused by an instruction fetch?
+
+  // Page not present
+  int present = regs.err_code & 0x1;
+
+  // Write operation?
+  int rw = regs.err_code & 0x2;
+
+  // Processor was in user-mode?
+  int us = regs.err_code & 0x4;
+
+  // Overwritten CPU-reserved bits of page entry?
+  int reserved = regs.err_code & 0x8;
+
+  // Caused by an instruction fetch?
+  int id = regs.err_code & 0x10;
 
   // k_printf("page fault !!!");
 
   // Output an error message.
   k_printf("Page fault! ( ");
-  if (present) {
-    k_printf("present ");
+
+  if (!present) {
+    k_printf("not present ");
   }
+
   if (rw) {
     k_printf("read-only ");
   }
+
   if (us) {
     k_printf("user-mode ");
   }
+
   if (reserved) {
     k_printf("reserved ");
   }
+
   k_printf(") at 0x%x", faulting_address);
   k_printf("\n");
 
