@@ -3,6 +3,7 @@
 #include "isr.h"
 #include "memory_map.h"
 #include "multiboot.h"
+#include "paging.h"
 #include "placement_memory.h"
 #include "recursive_page_tables.h"
 
@@ -31,6 +32,13 @@ void switch_page_directory(page_directory_t *dir);
 void page_fault_interrupt_handler(registers_t regs);
 
 void paging_test(multiboot_uint64_t placement_memory_address);
+
+// void dump_table(u32int *table_ptr);
+
+// void setup_page(u32int virtual_address);
+
+// void initialize_page_table(u32int *page_table_ptr,
+//                           uint32_t *page_table_frame_address_physical);
 
 //
 //
@@ -270,6 +278,7 @@ void main(unsigned long magic, unsigned long addr) {
   if (use_frames_in_bytes(bitmap, BITMAP_ELEMENT_COUNT,
                           RESERVED_MEMORY_IN_BYTES +
                               PLACEMENT_MEMORY_SIZE_IN_BYTES)) {
+
     k_printf("Setting up the bitmap failed!\n");
 
     return;
@@ -466,9 +475,6 @@ void main(unsigned long magic, unsigned long addr) {
 
   // k_dump_free_memory_map();
 
-  unsigned long fact = factorial(10);
-  k_printf("Factorial of 10: %d\n", fact);
-
   // u32int *ptr = 0;
   // u32int do_page_fault = 0;
 
@@ -483,225 +489,44 @@ void main(unsigned long magic, unsigned long addr) {
   // access that area which then causes a page fault
   // do_page_fault = *ptr;
 
-  // access the page directory while paging is on:
-  //
-  // 0xFFFFF000 is a virtual address that is managed by the last entry of
-  // the page directory. The first ten bits of 0xFFFFF000 are set to one, so
-  // it is managed by the last entry.
-  // Into this last entry, we wrote the physical address
-  // of where the page directory is placed in physical memory. So now the
-  // MMU is looking at the physical page table. The address 0xFFFFF000 also
-  // is taken care of by the last entry.
-  // Usually an entry in the page directory points to the address of a page
-  // table. Not in this special case! In this special case the physical address
-  // points to the page directory again instead of to some page table!
-  // The MMU now tries to resolve the next 10 bit in the address. The next
-  // 10 bit are set to 1 again, so that address points to the last entry in the
-  // page directory again! The last entry again points to the physical address
-  // of the page directory. The MMU performed the same loop twice and now points
-  // to the page directory.
-  page_directory_ptr = 0xFFFFF000;
+  // page_directory_ptr = 0xFFFFF000;
 
-  // uint32_t page_directory_entry = page_directory_ptr[0];
+  // k_printf("Setup page ...\n");
+  // setup_page(virtual_address);
+  // setup_page(virtual_address + 0x1000);
+  // k_printf("Setup page done.\n");
 
-  // iterate over all entries except the last in the page directory and
-  // output the entries that are present
-  for (int i = 0; i < 1022; i++) {
+  k_printf("PageFault?\n");
 
-    uint32_t page_directory_entry = page_directory_ptr[i];
+  // // access that area which then causes a page fault
+  // // put a memory on a area of memory that is unmapped
+  // // ptr = (u32int *)0xA0000000;
+  // // ptr = (u32int *)0xA0001000;
+  // // ptr = (u32int *)0xA0002000;
+  ptr = (u32int *)(virtual_address);
+  // ptr = (u32int *)(virtual_address + 0x1000);
 
-    // bit 1 is set if the page entry is present in memory
-    if (page_directory_entry & 1) {
+  // write
+  *ptr = 100;
 
-      // k_printf("Page Directory Entry %d is present!\n", i);
-    }
-  }
+  // read
+  do_page_fault = *ptr;
 
-  // access a page at 3 Gigabyte of virtual RAM
-  //
-  // 0xA0000000 = 2684354560 d = 2560 MB
+  k_printf("StoredValue: %d\n", do_page_fault);
 
-  // for (int i = 0; i < BITMAP_ELEMENT_COUNT; i++) {
+  ptr = (u32int *)(virtual_address + 0x1000);
+  // ptr = (u32int *)(virtual_address + 0x1000);
 
-  //   k_printf("%d\n", bitmap[i]);
-  // }
+  // write
+  *ptr = 101;
 
-  // find next free frame to house a page table
-  int page_table_frame_index =
-      next_free_frame_index(bitmap, BITMAP_ELEMENT_COUNT);
+  // read
+  do_page_fault = *ptr;
 
-  // k_printf("First free frame index: %d\n", page_table_frame_index);
+  k_printf("StoredValue: %d\n", do_page_fault);
 
-  if (page_table_frame_index < 0) {
-
-    k_printf("No free frames left!\n");
-
-  } else {
-
-    k_printf("First free frame index: %d\n", page_table_frame_index);
-
-    // set frame used
-    set(bitmap, BITMAP_ELEMENT_COUNT, page_table_frame_index, 1);
-
-    // compute physical address of frame
-    uint32_t *page_table_frame_address_physical =
-        page_table_frame_index * 0x1000;
-
-    // user wants to address this virtual address
-    // virtual_address += 0x2000;
-
-    // compute the index inside the page directory for the virtual_address
-    uint32_t page_directory_index = virtual_address / (4 * 1024 * 1024);
-    k_printf("page_directory_index: %d\n", page_directory_index);
-
-    // compute the index inside the page table for the virtual_address
-    uint32_t page_table_index =
-        (virtual_address % (4 * 1024 * 1024)) / (4 * 1024);
-    k_printf("page_table_index: %d\n", page_table_index);
-
-    k_printf("Retrieving page directory pointer...\n");
-
-    // this pointer lets us write into the page directory at the
-    // page directory entry that houses the new page table
-    // u32int *page_directory_ptr =
-    //     (u32int *)(0xFFFFF000 + page_directory_index * 0x400000);
-    u32int *page_directory_ptr =
-        (u32int *)(0xFFFFF000 + page_directory_index * 4);
-
-    k_printf("Retrieving page directory pointer done.!\n");
-
-    k_printf("Installing page directory entry ...\n");
-
-    // clear it
-    *page_directory_ptr = 0;
-    // put the physical address to the frame in that houses the page directory
-    *page_directory_ptr = page_table_frame_address_physical;
-    // mark it present
-    *page_directory_ptr |= 3;
-
-    k_printf("Installing page directory entry done.\n");
-
-    k_printf("Dumping page directory via the recursive trick...\n");
-
-    // compute the magic recursive address to the page table
-    // N.B: The page table is indexed via the page_directory_index,
-    // not the page_table_index!!!! page_directory_index is an index inside
-    // the page directory
-    // see https://medium.com/@connorstack/recursive-page-tables-ad1e03b20a85
-    u32int *herp = (u32int *)0xFFFFF000;
-
-    for (int i = 0; i < 1022; i++) {
-
-      uint32_t page_table_entry = herp[i];
-
-      // bit 1 is set if the page entry is present in memory
-      if (page_table_entry & 1) {
-
-        k_printf("Page Table Entry %d is present!\n", i);
-      }
-    }
-    k_printf("Dumping page directory via the recursive trick done.\n");
-
-    k_printf("Creating page table ...\n");
-
-    // here the page table is accessed before the recursive trick is applied
-    // which fortunately works without any issues ...
-    u32int *page_table_ptr =
-        (u32int *)(0xFFC00000 + page_directory_index * 0x1000);
-
-    // create a page table
-    // first initialize it and set each entry to "not present"
-    for (int i = 0; i < 1024; i++) {
-
-      // This sets the following flags to the pages:
-      //
-      //   * Supervisor: Only kernel-mode can access them
-      //   (If the bit is set,
-      //   then the page may be accessed by all;
-      //   if the bit is not set,however,
-      //   only the supervisor can access it.)
-      //
-      //   * Write Enabled: It can be both read from
-      //   and written to
-      //
-      //   * Present: The page table is not present because
-      //   the last bit (P) is 0
-      // page_table_frame_address_physical[i] = 0x00000002;
-      page_table_ptr[i] = 0x00000002;
-    }
-
-    // recursive trick for page table
-    page_table_ptr[1023] = page_table_frame_address_physical;
-
-    k_printf("Creating page table done.\n");
-
-    // find another free frame to put behind the page table entry and mark it
-    // used. This frame will actually store that data and the page table entry
-    // will point to it
-    int data_frame_index = next_free_frame_index(bitmap, BITMAP_ELEMENT_COUNT);
-    k_printf("Second free frame index: %d\n", data_frame_index);
-    set(bitmap, BITMAP_ELEMENT_COUNT, data_frame_index, 1);
-
-    // multiply the frame's inde in the bitmap with the size of a frame to
-    // compute a free physical memory address of that particular frame
-    uint32_t *data_frame_address_physical = data_frame_index * 0x1000;
-
-    // set the address to the data frame into the page table entry
-    page_table_ptr[page_table_index] = data_frame_address_physical;
-
-    // make the page table entry present
-    page_table_ptr[page_table_index] |= 1;
-
-    // k_printf("Dumping page table ...\n");
-    // for (int i = 0; i < 1022; i++) {
-
-    //   uint32_t page_table_entry = page_table_ptr[i];
-
-    //   // bit 1 is set if the page entry is present in memory
-    //   if (page_table_entry & 1) {
-
-    //     k_printf("Page Table Entry %d is present!\n", i);
-    //   }
-    // }
-    // k_printf("Dumping page table done.\n");
-
-    // compute the magic recursive address to the page table
-    // N.B: The page table is indexed via the page_directory_index,
-    // not the page_table_index!!!! page_directory_index is an index inside
-    // the page directory
-    // see https://medium.com/@connorstack/recursive-page-tables-ad1e03b20a85
-    u32int *derp = (u32int *)(0xFFC00000 + (page_directory_index * 0x1000));
-
-    k_printf("Dumping page table via the recursive trick...\n");
-
-    for (int i = 0; i < 1022; i++) {
-
-      uint32_t page_table_entry = derp[i];
-
-      // bit 1 is set if the page entry is present in memory
-      if (page_table_entry & 1) {
-
-        k_printf("Page Table Entry %d is present!\n", i);
-      }
-    }
-
-    k_printf("Dumping page table via the recursive trick done.\n");
-
-    k_printf("PageFault?\n");
-
-    // access that area which then causes a page fault
-    // put a memory on a area of memory that is unmapped
-    // ptr = (u32int *)0xA0000000;
-    // ptr = (u32int *)0xA0001000;
-    // ptr = (u32int *)0xA0002000;
-    ptr = (u32int *)virtual_address;
-
-    *ptr = 100;
-
-    do_page_fault = *ptr;
-
-    k_printf("StoredValue: %d\n", do_page_fault);
-  }
+  unsigned long fact = factorial(10);
+  k_printf("Factorial of 10: %d\n", fact);
 
   // after main returns, program flow jumps back to boot.asm which executes hlt
   // to hlt the CPU
@@ -768,8 +593,8 @@ void paging_test(multiboot_uint64_t placement_memory_address) {
     ptr_page_directory->pages[i].user = 0;
   }
 
-  // the last entry in the page directory contains a physical pointer to itself
-  // ptr_page_directory->tables[1023] = ptr_page_directory;
+  // the last entry in the page directory contains a physical pointer to
+  // itself ptr_page_directory->tables[1023] = ptr_page_directory;
 
   page_table_t *page_table_0 = ptr + 4096 * 1;
   page_t *page = &(page_table_0->pages[1023]);
@@ -821,10 +646,10 @@ void paging_test(multiboot_uint64_t placement_memory_address) {
 
   unsigned int frame_index = 0;
 
-  initialize_page_table(&frame_index, page_table_0);
-  initialize_page_table(&frame_index, page_table_1);
-  initialize_page_table(&frame_index, page_table_2);
-  initialize_page_table(&frame_index, page_table_3);
+  initialize_page_table_full(&frame_index, page_table_0);
+  initialize_page_table_full(&frame_index, page_table_1);
+  initialize_page_table_full(&frame_index, page_table_2);
+  initialize_page_table_full(&frame_index, page_table_3);
 
   // Before we enable paging, we must register our page fault handler.
   register_interrupt_handler(14, page_fault_interrupt_handler);
@@ -842,12 +667,12 @@ void paging_test(multiboot_uint64_t placement_memory_address) {
   // available under the same address
 
   // Test 3: the qemu virtual machine has only 200 MB of RAM
-  // with paging enabled, allocate a page at 1000MB of RAM (virtual address) and
-  // write a value into that RAM location. Read the value back and compare. The
-  // algorithm has to be able to add page directory entries and page table
-  // entries for that memory location aven after paging has been enabled. It has
-  // to map the page to a phyisically available frame in the phyiscal RAM 0-200
-  // MB.
+  // with paging enabled, allocate a page at 1000MB of RAM (virtual address)
+  // and write a value into that RAM location. Read the value back and
+  // compare. The algorithm has to be able to add page directory entries and
+  // page table entries for that memory location aven after paging has been
+  // enabled. It has to map the page to a phyisically available frame in the
+  // phyiscal RAM 0-200 MB.
 }
 
 unsigned int allocate_frame_aligned(multiboot_uint64_t *placement_memory,
@@ -879,8 +704,8 @@ unsigned int allocate_frame_aligned(multiboot_uint64_t *placement_memory,
   return tmp;
 }
 
-void initialize_page_table(unsigned int *frame_index,
-                           page_table_t *page_table) {
+void initialize_page_table_full(unsigned int *frame_index,
+                                page_table_t *page_table) {
 
   // for (int i = 0; i < 1023; i++) {
   for (int i = 0; i < 1024; i++) {
@@ -1013,5 +838,7 @@ void page_fault_interrupt_handler(registers_t regs) {
   // Calling panic will just output a message onto the scree once and then
   // start the endless loop so the user has time to read the error message
   // on the screen
-  PANIC("Page fault");
+  // PANIC("Page fault");
+
+  setup_page(faulting_address);
 }
