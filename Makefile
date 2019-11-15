@@ -34,8 +34,9 @@ kernel: kernel.c placement_memory.c isr.c descriptor_tables.c common.c memory_ma
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c stack.c -o stack.o
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c bitmap.c -o bitmap.o
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c paging.c -o paging.o
+	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c pci.c -o pci.o
 
-linker: linker.ld boot.o kernel.o placement_memory.o isr.o gdt.o interrupt.o descriptor_tables.o common.o memory_map.o stack.o bitmap.o paging.o
+linker: linker.ld boot.o kernel.o placement_memory.o isr.o gdt.o interrupt.o descriptor_tables.o common.o memory_map.o stack.o bitmap.o paging.o pci.o
 	$(LD) -m elf_i386 -T linker.ld -o kernel \
 	boot.o \
 	kernel.o \
@@ -48,7 +49,8 @@ linker: linker.ld boot.o kernel.o placement_memory.o isr.o gdt.o interrupt.o des
 	memory_map.o \
 	stack.o \
 	bitmap.o \
-	paging.o
+	paging.o \
+	pci.o
 
 iso: kernel
 	$(MKDIR) $(GRUB_PATH)

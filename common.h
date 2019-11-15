@@ -19,19 +19,44 @@ typedef short s16int;
 typedef unsigned char u8int;
 typedef char s8int;
 
-/*
-void outb(u16int port, u8int value);
-u8int inb(u16int port);
-u16int inw(u16int port);
-*/
+// https://wiki.osdev.org/I/O_Ports
+// An I/O port is usually used as a technical term for a specific address on the
+// x86's IO bus. This bus provides communication with devices in a fixed order
+// and size, and was used as an alternative to memory access.
+//
+// https://stackoverflow.com/questions/3215878/what-are-in-out-instructions-in-x86-used-for
+// The term "port" is coined in the intel manuals.
 
-/* Check if the bit BIT in FLAGS is set. */
+// outb - output a byte to a port
+// with "b" meaning byte
+void outb(u8int value, u16int port);
+
+// outw - output a WORD (16 bit) to a port
+// and "w" meaning word (16 bits).
+void outw(u16int value, u16int port);
+
+// outl - output a DWORD to a port
+// and "l" meaning long (32 bits).
+void outl(u32int value, u16int port);
+
+// inb - read a byte from a port
+u8int inb(u16int port);
+
+// inw - read a word from a port
+// "w" meaning word (16 bits)
+u16int inw(u16int port);
+
+// inl - read a DWORD from a port
+// "l" meaning DWORD (32 bits)
+u32int inl(u16int port);
+
+// check if the bit BIT in FLAGS is set.
 #define CHECK_FLAG(flags, bit) ((flags) & (1 << (bit)))
 
-/* video memory begins here. */
+// video memory begins here.
 #define VGA_ADDRESS 0xB8000
 
-/* VGA provides support for 16 colors */
+// VGA provides support for 16 colors */
 #define BLACK 0
 #define GREEN 2
 #define RED 4
@@ -41,22 +66,22 @@ u16int inw(u16int port);
 unsigned short *terminal_buffer;
 unsigned int vga_index;
 
-/* Some screen stuff. */
-/* The number of columns. */
+// Some screen stuff.
+// The number of columns.
 #define COLUMNS 80
-/* The number of lines. */
+// The number of lines.
 #define LINES 24
-/* The attribute of an character. */
+// The attribute of an character.
 #define ATTRIBUTE 7
-/* The video memory address. */
+// The video memory address.
 #define VIDEO 0xB8000
 
-/* Variables. */
-/* Save the X position. */
+// Variables.
+// Save the X position.
 int xpos;
-/* Save the Y position. */
+// Save the Y position.
 int ypos;
-/* Point to the video memory. */
+// Point to the video memory.
 volatile unsigned char *video;
 
 void k_cls(void);

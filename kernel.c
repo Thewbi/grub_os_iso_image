@@ -4,6 +4,7 @@
 #include "memory_map.h"
 #include "multiboot.h"
 #include "paging.h"
+#include "pci.h"
 #include "placement_memory.h"
 #include "recursive_page_tables.h"
 
@@ -475,8 +476,9 @@ void main(unsigned long magic, unsigned long addr) {
 
   // k_dump_free_memory_map();
 
-  // u32int *ptr = 0;
-  // u32int do_page_fault = 0;
+  // pci
+  k_printf("PCI ...\n");
+  init_pcilist();
 
   u32int *ptr = (u32int *)0x00000000;
   u32int do_page_fault = *ptr;

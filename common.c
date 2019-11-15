@@ -3,26 +3,52 @@
 
 #include "common.h"
 
-/*
-// Write a byte out to the specified port.
-void outb(u16int port, u8int value) {
-  asm volatile("outb %1, %0" : : "dN"(port), "a"(value));
+// write a byte out to the specified port.
+void outb(u8int value, u16int port) {
+
+  __asm__ __volatile__("outb %1, %0" : : "dN"(port), "a"(value));
 }
 
+// write a word (16 bit) out to the specified port.
+void outw(u16int value, u16int port) {
+
+  __asm__ __volatile__("outb %1, %0" : : "dN"(port), "a"(value));
+}
+
+// "l" meaning long (32bits)
+void outl(u32int value, u16int port) {
+
+  __asm__ __volatile__("outl %1, %0" : : "dN"(port), "a"(value));
+}
+
+// read a byte from the specified port.
 u8int inb(u16int port) {
+
   u8int ret;
-  asm volatile("inb %1, %0" : "=a"(ret) : "dN"(port));
+  __asm__ __volatile__("inb %1, %0" : "=a"(ret) : "dN"(port));
+
   return ret;
 }
 
+// read a word from the specified port.
 u16int inw(u16int port) {
+
   u16int ret;
-  asm volatile("inw %1, %0" : "=a"(ret) : "dN"(port));
+  __asm__ __volatile__("inw %1, %0" : "=a"(ret) : "dN"(port));
+
   return ret;
 }
-*/
 
-// Copy len bytes from src to dest.
+// read a word from the specified port.
+u32int inl(u16int port) {
+
+  u32int ret;
+  __asm__ __volatile__("inl %1, %0" : "=a"(ret) : "dN"(port));
+
+  return ret;
+}
+
+// copy len bytes from src to dest.
 void k_memcpy(u8int *dest, const u8int *src, u32int len) {
 
   const u8int *sp = (const u8int *)src;
@@ -32,7 +58,7 @@ void k_memcpy(u8int *dest, const u8int *src, u32int len) {
   }
 }
 
-// Write len copies of val into dest.
+// write len copies of val into dest.
 void k_memset(u8int *dest, u8int val, u32int len) {
 
   u8int *temp = (u8int *)dest;
@@ -41,7 +67,7 @@ void k_memset(u8int *dest, u8int val, u32int len) {
   }
 }
 
-// Compare two strings. Should return -1 if
+// compare two strings. Should return -1 if
 // str1 < str2, 0 if they are equal or 1 otherwise.
 int k_strcmp(char *str1, char *str2) {
 
@@ -65,7 +91,7 @@ int k_strcmp(char *str1, char *str2) {
   return failed;
 }
 
-// Copy the NULL-terminated string src into dest, and
+// copy the NULL-terminated string src into dest, and
 // return dest.
 char *k_strcpy(char *dest, const char *src) {
 
@@ -74,7 +100,7 @@ char *k_strcpy(char *dest, const char *src) {
   } while (*src != 0);
 }
 
-// Concatenate the NULL-terminated string src onto
+// concatenate the NULL-terminated string src onto
 // the end of dest, and return dest.
 char *k_strcat(char *dest, const char *src) {
 
@@ -89,7 +115,7 @@ char *k_strcat(char *dest, const char *src) {
   return dest;
 }
 
-/* Clear the screen and initialize VIDEO, XPOS and YPOS. */
+// clear the screen and initialize VIDEO, XPOS and YPOS.
 void k_cls(void) {
 
   int i;
@@ -103,9 +129,9 @@ void k_cls(void) {
   ypos = 0;
 }
 
-/* Convert the integer D to a string and save the string in BUF. If
-   BASE is equal to 'd', interpret that D is decimal, and if BASE is
-   equal to 'x', interpret that D is hexadecimal. */
+// Convert the integer D to a string and save the string in BUF. If
+// BASE is equal to 'd', interpret that D is decimal, and if BASE is
+// equal to 'x', interpret that D is hexadecimal.
 void k_itoa(char *buf, int base, int d) {
 
   char *p = buf;
@@ -113,7 +139,7 @@ void k_itoa(char *buf, int base, int d) {
   unsigned long ud = d;
   int divisor = 10;
 
-  /* If %d is specified and D is minus, put `-' in the head. */
+  // If %d is specified and D is minus, put `-' in the head.
   if (base == 'd' && d < 0) {
     *p++ = '-';
     buf++;
@@ -122,17 +148,17 @@ void k_itoa(char *buf, int base, int d) {
     divisor = 16;
   }
 
-  /* Divide UD by DIVISOR until UD == 0. */
+  // Divide UD by DIVISOR until UD == 0.
   do {
     int remainder = ud % divisor;
 
     *p++ = (remainder < 10) ? remainder + '0' : remainder + 'a' - 10;
   } while (ud /= divisor);
 
-  /* Terminate BUF. */
+  // Terminate BUF.
   *p = 0;
 
-  /* Reverse BUF. */
+  // Reverse BUF.
   p1 = buf;
   p2 = p - 1;
   while (p1 < p2) {
@@ -144,7 +170,7 @@ void k_itoa(char *buf, int base, int d) {
   }
 }
 
-/* Put the character C on the screen. */
+// Put the character C on the screen.
 void k_putchar(int c) {
 
   if (c == '\n' || c == '\r') {
@@ -164,13 +190,14 @@ void k_putchar(int c) {
     goto newline;
 }
 
-/* Format a string and print it on the screen, just like the libc
-   function printf.
-
-   Does not support float or double.
-
-   Is buggy when using more than one format specifier in the same format string.
-   */
+// Format a string and print it on the screen, just like the libc
+// function printf.
+//
+//   Does not support float or double.
+//
+//   Is buggy when using more than one format specifier in the same format
+//   string.
+//
 void k_printf(const char *format, ...) {
 
   vga_index += 80;
@@ -230,7 +257,7 @@ void k_printf(const char *format, ...) {
 void k_clear_screen(void) {
 
   int index = 0;
-  /* there are 25 lines each of 80 columns; each element takes 2 bytes */
+  // there are 25 lines each of 80 columns; each element takes 2 bytes
   while (index < 80 * 25 * 2) {
     terminal_buffer[index] = ' ';
     index += 2;
