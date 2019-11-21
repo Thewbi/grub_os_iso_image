@@ -7,7 +7,7 @@
 
 #include "isr.h"
 #include "common.h"
-//#include "monitor.h"
+#include "types.h"
 
 isr_t interrupt_handlers[256];
 
@@ -27,10 +27,6 @@ void isr_handler(registers_t regs) {
 
     k_printf("I do not understand - isr.c - isr_handler()");
   }
-
-  // monitor_write("recieved interrupt: ");
-  // monitor_write_dec(regs.int_no);
-  // monitor_put('\n');
 }
 
 void register_interrupt_handler(u8int n, isr_t handler) {

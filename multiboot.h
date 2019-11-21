@@ -20,6 +20,9 @@
 
 /* Macros. */
 
+// check if the bit BIT in FLAGS is set.
+#define CHECK_FLAG(flags, bit) ((flags) & (1 << (bit)))
+
 /* The magic number for the Multiboot header. */
 #define MULTIBOOT_HEADER_MAGIC 0x1BADB002
 
@@ -109,5 +112,9 @@ typedef struct memory_map {
 } memory_map_t;
 
 #endif /* ! ASM */
+
+void processELF(multiboot_info_t *mbi);
+
+void processMods(multiboot_info_t *mbi);
 
 #endif

@@ -1,5 +1,16 @@
 #include "paging.h"
 
+int brk(void *addr) { return 0; }
+
+void *sbrk(int incr) { return 0; }
+
+/**
+ * @brief adding a page to the paging table and directory
+ *
+ * This is called in the page_fault_interrupt_handler()
+ *
+ * @param virtual_address
+ */
 void setup_page(uint32_t virtual_address) {
 
   // k_printf("virtual_address: %x\n", virtual_address);
@@ -196,4 +207,56 @@ void dump_table(u32int *table_ptr) {
       k_printf("Entry %d is present!\n", i);
     }
   }
+}
+
+void page_fault_interrupt_handler(registers_t regs) {
+
+  // A page fault has occurred.
+  // The faulting address is stored in the CR2 register.
+  u32int faulting_address;
+  __asm__ __volatile__("mov %%cr2, %0" : "=r"(faulting_address));
+
+  // The error code gives us details of what happened.
+
+  // Page not present
+  int present = regs.err_code & 0x1;
+
+  // Write operation?
+  int rw = regs.err_code & 0x2;
+
+  // Processor was in user-mode?
+  int us = regs.err_code & 0x4;
+
+  // Overwritten CPU-reserved bits of page entry?
+  int reserved = regs.err_code & 0x8;
+
+  // Caused by an instruction fetch?
+  int id = regs.err_code & 0x10;
+
+  // k_printf("page fault !!!");
+
+  // Output an error message.
+  k_printf("Page fault! ( ");
+
+  if (!present) {
+    k_printf("not present ");
+  }
+
+  if (rw) {
+    k_printf("read-only ");
+  }
+
+  if (us) {
+    k_printf("user-mode ");
+  }
+
+  if (reserved) {
+    k_printf("reserved ");
+  }
+
+  k_printf(") at 0x%x", faulting_address);
+  k_printf("\n");
+
+  // create a page at the location that the application wants to access
+  setup_page(faulting_address);
 }
