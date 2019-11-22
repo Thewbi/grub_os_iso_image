@@ -1,8 +1,23 @@
 #include "paging.h"
 
-int brk(void *addr) { return 0; }
+uint32_t *heap_start = (uint32_t *)(50 * 1024 * 1024);
+uint32_t *heap_end = (uint32_t *)(50 * 1024 * 1024);
 
-void *sbrk(int incr) { return 0; }
+int brk(void *addr) {
+
+  heap_end = addr;
+
+  return 0;
+}
+
+void *sbrk(int incr) {
+
+  uint32_t *result = heap_end;
+
+  heap_end += incr;
+
+  return (void *)result;
+}
 
 /**
  * @brief adding a page to the paging table and directory
@@ -34,7 +49,7 @@ void setup_page(uint32_t virtual_address) {
 
     // compute physical address of the frame for the page table
     uint32_t *page_table_frame_address_physical =
-        page_table_frame_index * 0x1000;
+        (uint32_t *)(page_table_frame_index * 0x1000);
 
     // compute the index inside the page directory for the virtual_address
     uint32_t page_directory_index = virtual_address / (4 * 1024 * 1024);
@@ -68,7 +83,7 @@ void setup_page(uint32_t virtual_address) {
       *page_directory_ptr = 0;
 
       // put the physical address to the frame in that houses the page directory
-      *page_directory_ptr = page_table_frame_address_physical;
+      *page_directory_ptr = (uint32_t)page_table_frame_address_physical;
 
       // mark it present
       *page_directory_ptr |= 3;
@@ -138,10 +153,11 @@ void setup_page(uint32_t virtual_address) {
 
     // multiply the frame's index in the bitmap with the size of a frame to
     // compute a free physical memory address of that particular frame
-    uint32_t *data_frame_address_physical = data_frame_index * 0x1000;
+    uint32_t *data_frame_address_physical =
+        (uint32_t *)(data_frame_index * 0x1000);
 
     // set the address to the data frame into the page table entry
-    page_table_ptr[page_table_index] = data_frame_address_physical;
+    page_table_ptr[page_table_index] = (uint32_t)data_frame_address_physical;
 
     // make the page table entry present
     page_table_ptr[page_table_index] |= 1;
@@ -192,7 +208,7 @@ void initialize_page_table(u32int *page_table_ptr,
   }
 
   // recursive trick for page table
-  page_table_ptr[1023] = page_table_frame_address_physical;
+  page_table_ptr[1023] = (uint32_t)page_table_frame_address_physical;
 }
 
 void dump_table(u32int *table_ptr) {

@@ -69,7 +69,8 @@ multiboot_uint64_t placement_memory;
 typedef struct memory_area {
   multiboot_uint64_t start;
   multiboot_uint64_t size;
-} memory_area_t __attribute__((packed));
+} memory_area_t;
+//} memory_area_t __attribute__((packed));
 
 // resets the array that is used to manage free memory areas so that all
 // knowledge about existing free memory areas are erased

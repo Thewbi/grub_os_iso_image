@@ -5,6 +5,13 @@
 #include "common.h"
 #include "types.h"
 
+// variables are in the .c file
+// extern uint32_t * heap_start = 50 * 1024 * 1024;
+// extern uint32_t * heap_end = 50 * 1024 * 1024;
+
+extern uint32_t * heap_start;
+extern uint32_t * heap_end;
+
 void setup_page(uint32_t virtual_address);
 
 void initialize_page_table(u32int *page_table_ptr,

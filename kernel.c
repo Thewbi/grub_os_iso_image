@@ -1,5 +1,6 @@
 #include "bitmap.h"
 #include "descriptor_tables.h"
+#include "heap.h"
 #include "isr.h"
 #include "memory_map.h"
 #include "multiboot.h"
@@ -8,8 +9,10 @@
 #include "placement_memory.h"
 #include "recursive_page_tables.h"
 
-#define RESERVED_MEMORY_IN_BYTES 10 * 1024 * 1024
+#define RESERVED_MEMORY_IN_BYTES 40 * 1024 * 1024
 #define SIZE_OF_FRAME_IN_BYTES 4 * 1024
+
+unsigned int page_table_count = (40 / 4);
 
 // end is defined in the linker script.
 extern unsigned int end;
@@ -23,12 +26,7 @@ extern uint32_t bitmap[BITMAP_ELEMENT_COUNT];
 unsigned int allocate_frame_aligned(multiboot_uint64_t *placement_memory,
                                     unsigned int size_in_byte);
 
-long factorial(int n) {
-  if (n == 0)
-    return 1;
-  else
-    return (n * factorial(n - 1));
-}
+long factorial(int n);
 
 void paging_setup();
 
@@ -108,15 +106,13 @@ void main(unsigned long magic, unsigned long addr) {
     return;
   }
 
+  // reset the bitmap of used frames
+  reset_bitmap(bitmap, BITMAP_ELEMENT_COUNT);
+
   // identity map all frames from 0 up to the start
 
   // of the first free entry in the placement memory table
-  // mark the first 15 MB of ram used in the bitmap of frames
-  reset_bitmap(bitmap, BITMAP_ELEMENT_COUNT);
-
-  // k_printf("First element: %d\n", bitmap[0]);
-  // k_printf("%d\n", next_free_frame_index(bitmap, BITMAP_ELEMENT_COUNT));
-
+  // mark the first ? MB of RAM used in the bitmap of frames
   if (use_frames_in_bytes(bitmap, BITMAP_ELEMENT_COUNT,
                           RESERVED_MEMORY_IN_BYTES +
                               PLACEMENT_MEMORY_SIZE_IN_BYTES)) {
@@ -129,16 +125,20 @@ void main(unsigned long magic, unsigned long addr) {
   // k_printf("First element: %d\n", bitmap[0]);
   // k_printf("%d\n", next_free_frame_index(bitmap, BITMAP_ELEMENT_COUNT));
 
-  // identity maps 16 Megabyte then turns paging on
-  paging_setup();
+  // identity maps ? Megabyte then turns paging on
+  paging_setup(page_table_count);
 
   paging_tests();
 
   // k_dump_free_memory_map();
 
-  // pci
-  k_printf("PCI ...\n");
-  init_pcilist();
+  // // pci
+  // k_printf("PCI ...\n");
+  // init_pcilist();
+
+  void *mem_ptr = k_malloc((size_t)1000);
+  k_free(mem_ptr);
+  mem_ptr = NULL;
 
   unsigned long fact = factorial(10);
   k_printf("Factorial of 10: %d\n", fact);
@@ -177,7 +177,7 @@ unsigned int allocate_frame_aligned(multiboot_uint64_t *placement_memory,
   return tmp;
 }
 
-void paging_setup() {
+void paging_setup(int page_table_count) {
 
   // k_printf("Paging Setup ...\n");
 
@@ -190,19 +190,20 @@ void paging_setup() {
   // 4 page tables for 16 MB placement memory
   // 1024 entries each
   // 4 byte = 32 bit per entry
-  uint32_t *paging_ptr = 0;
-  paging_ptr =
-      allocate_frame_aligned(&placement_memory_address, ((4 + 1) * 1024 * 4));
+  unsigned int page_directory_count = 1;
+  unsigned int size_in_byte =
+      ((page_directory_count + page_table_count) * 1024 * 4);
+  uint32_t *paging_ptr = (uint32_t *)allocate_frame_aligned(
+      &placement_memory_address, size_in_byte);
 
   // k_printf("paging_ptr: %d\n", paging_ptr);
-
-  uint32_t *page_directory_ptr = 0;
-  page_directory_ptr = paging_ptr;
+  uint32_t *page_directory_ptr = paging_ptr;
 
   // k_printf("page_directory_ptr: %d\n", page_directory_ptr);
 
-  // set each entry to not present
+  // set each entry in the page directory to not present
   for (int i = 0; i < 1024; i++) {
+
     // This sets the following flags to the pages:
     //
     //   * Supervisor: Only kernel-mode can access them
@@ -224,7 +225,7 @@ void paging_setup() {
   // k_printf("Applying recursive trick to page directory ...\n");
 
   // last entry stores address of the table
-  page_directory_ptr[1023] = page_directory_ptr;
+  page_directory_ptr[1023] = (uint32_t)page_directory_ptr;
 
   // set the present flag otherwise the MMU will signal a page fault
   page_directory_ptr[1023] |= 1;
@@ -235,7 +236,7 @@ void paging_setup() {
 
   // k_printf("Initializing page tables ...\n");
 
-  unsigned int page_table_count = 4;
+  // unsigned int page_table_count = 4;
   // uint32_t page_tables[1024 * page_table_count]
   // __attribute__((aligned(4096)));
 
@@ -272,7 +273,7 @@ void paging_setup() {
   for (unsigned int i = 0; i < page_table_count; i++) {
 
     // last entry stores address of the table
-    page_tables_ptr[i * 1024 + 1023] = tempA;
+    page_tables_ptr[i * 1024 + 1023] = (uint32_t)tempA;
 
     // the Present bit has to be set, otherwise the MMU will signal a page
     // fault
@@ -294,7 +295,7 @@ void paging_setup() {
   for (unsigned int i = 0; i < page_table_count; i++) {
 
     // attributes: supervisor level, read/write, present
-    page_directory_ptr[i] = temp;
+    page_directory_ptr[i] = (uint32_t)temp;
     page_directory_ptr[i] |= 3;
 
     // increment to next page_table
@@ -416,4 +417,11 @@ void paging_tests() {
   do_page_fault = *ptr;
 
   k_printf("StoredValue: %d\n", do_page_fault);
+}
+
+long factorial(int n) {
+  if (n == 0)
+    return 1;
+  else
+    return (n * factorial(n - 1));
 }
