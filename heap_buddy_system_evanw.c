@@ -322,17 +322,14 @@ static int lower_bucket_limit(size_t bucket) {
   return 1;
 }
 
-// void *k_malloc(size_t request) {}
+void *malloc(size_t request) {
 
-void *k_malloc(size_t request) {
   size_t original_bucket, bucket;
 
   /*
    * Make sure it's possible for an allocation of this size to succeed.
-   There's
-   * a hard-coded limit on the maximum allocation size because of the way
-   this
-   * allocator works.
+   * There's a hard-coded limit on the maximum allocation size because
+   * of the way this allocator works.
    */
   if (request + HEADER_SIZE > MAX_ALLOC) {
     return NULL;
@@ -340,8 +337,7 @@ void *k_malloc(size_t request) {
 
   /*
    * Initialize our global state if this is the first call to "malloc". At
-   the
-   * beginning, the tree has a single node that represents the smallest
+   * the beginning, the tree has a single node that represents the smallest
    * possible allocation size. More memory will be reserved later as needed.
    */
   if (base_ptr == NULL) {
@@ -399,9 +395,8 @@ void *k_malloc(size_t request) {
        * free list again. Since we know the root of the tree is used (because
        * the free list was empty), this will add a parent above this node in
        * the SPLIT state and then add the new right child node to the free
-       list
-       * for this bucket. Popping the free list will give us this right
-       child.
+       * list for this bucket. Popping the free list will give us this right
+       * child.
        */
       if (!lower_bucket_limit(bucket - 1)) {
         return NULL;
@@ -422,15 +417,15 @@ void *k_malloc(size_t request) {
 
     /*
      * If we got a node off the free list, change the node from UNUSED to
-     USED.
+     * USED.
+     *
      * This involves flipping our parent's "is split" bit because that bit is
      * the exclusive-or of the UNUSED flags of both children, and our UNUSED
      * flag (which isn't ever stored explicitly) has just changed.
      *
      * Note that we shouldn't ever need to flip the "is split" bit of our
      * grandparent because we know our buddy is USED so it's impossible for
-     our
-     * grandparent to be UNUSED (if our buddy chunk was UNUSED, our parent
+     * our grandparent to be UNUSED (if our buddy chunk was UNUSED, our parent
      * wouldn't ever have been split in the first place).
      */
     i = node_for_ptr(ptr, bucket);
@@ -440,12 +435,10 @@ void *k_malloc(size_t request) {
 
     /*
      * If the node we got is larger than we need, split it down to the
-     correct
-     * size and put the new unused child nodes on the free list in the
+     * correct size and put the new unused child nodes on the free list in the
      * corresponding bucket. This is done by repeatedly moving to the left
      * child, splitting the parent, and then adding the right child to the
-     free
-     * list.
+     * free list.
      */
     while (bucket < original_bucket) {
       i = i * 2 + 1;
@@ -456,9 +449,8 @@ void *k_malloc(size_t request) {
 
     /*
      * Now that we have a memory address, write the block header (just the
-     size
-     * of the allocation) and return the address immediately after the
-     header.
+     * size of the allocation) and return the address immediately after the
+     * header.
      */
     *(size_t *)ptr = request;
     return ptr + HEADER_SIZE;
@@ -467,9 +459,8 @@ void *k_malloc(size_t request) {
   return NULL;
 }
 
-// void k_free(void *ptr) {}
+void free(void *ptr) {
 
-void k_free(void *ptr) {
   size_t bucket, i;
 
   /*
@@ -481,10 +472,8 @@ void k_free(void *ptr) {
 
   /*
    * We were given the address returned by "malloc" so get back to the
-   actual
-   * address of the node by subtracting off the size of the block header.
-   Then
-   * look up the index of the node corresponding to this address.
+   * actual address of the node by subtracting off the size of the block
+   * header. Then look up the index of the node corresponding to this address.
    */
   ptr = (u8int *)ptr - HEADER_SIZE;
   bucket = bucket_for_request(*(size_t *)ptr + HEADER_SIZE);
@@ -492,31 +481,25 @@ void k_free(void *ptr) {
 
   /*
    * Traverse up to the root node, flipping USED blocks to UNUSED and
-   merging
-   * UNUSED buddies together into a single UNUSED parent.
+   * merging UNUSED buddies together into a single UNUSED parent.
    */
   while (i != 0) {
     /*
      * Change this node from UNUSED to USED. This involves flipping our
      * parent's "is split" bit because that bit is the exclusive-or of
-     the
-     * UNUSED flags of both children, and our UNUSED flag (which isn't
-     ever
-     * stored explicitly) has just changed.
+     * the UNUSED flags of both children, and our UNUSED flag (which isn't
+     * ever stored explicitly) has just changed.
      */
     flip_parent_is_split(i);
 
     /*
      * If the parent is now SPLIT, that means our buddy is USED, so don't
-     merge
-     * with it. Instead, stop the iteration here and add ourselves to the
-     free
-     * list for our bucket.
+     * merge with it. Instead, stop the iteration here and add ourselves
+     * to the free list for our bucket.
      *
      * Also stop here if we're at the current root node, even if that
-     root node
-     * is now UNUSED. Root nodes don't have a buddy so we can't merge
-     with one.
+     * root node is now UNUSED. Root nodes don't have a buddy so we
+     * can't merge with one.
      */
     if (parent_is_split(i) || bucket == bucket_limit) {
       break;
@@ -524,14 +507,10 @@ void k_free(void *ptr) {
 
     /*
      * If we get here, we know our buddy is UNUSED. In this case we
-     should
-     * merge with that buddy and continue traversing up to the root node.
-     We
-     * need to remove the buddy from its free list here but we don't need
-     to
-     * add the merged parent to its free list yet. That will be done once
-     after
-     * this loop is finished.
+     * should merge with that buddy and continue traversing up to the
+     * root node. We need to remove the buddy from its free list here
+     * but we don't need to add the merged parent to its free list yet.
+     * That will be done once after this loop is finished.
      */
     list_remove((list_t *)ptr_for_node(((i - 1) ^ 1) + 1, bucket));
     i = (i - 1) / 2;
@@ -540,12 +519,9 @@ void k_free(void *ptr) {
 
   /*
    * Add ourselves to the free list for our bucket. We add to the back of
-   the
-   * list because "malloc" takes from the back of the list and we want a
-   "free"
-   * followed by a "malloc" of the same size to ideally use the same
-   address
-   * for better memory locality.
+   * the list because "malloc" takes from the back of the list and we want a
+   * "free" followed by a "malloc" of the same size to ideally use the same
+   * address for better memory locality.
    */
   list_push(&buckets[bucket], (list_t *)ptr_for_node(i, bucket));
 }

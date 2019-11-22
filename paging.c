@@ -251,27 +251,29 @@ void page_fault_interrupt_handler(registers_t regs) {
 
   // k_printf("page fault !!!");
 
-  // Output an error message.
-  k_printf("Page fault! ( ");
+  /*
+    // Output an error message.
+    k_printf("Page fault! ( ");
 
-  if (!present) {
-    k_printf("not present ");
-  }
+    if (!present) {
+      k_printf("not present ");
+    }
 
-  if (rw) {
-    k_printf("read-only ");
-  }
+    if (rw) {
+      k_printf("read-only ");
+    }
 
-  if (us) {
-    k_printf("user-mode ");
-  }
+    if (us) {
+      k_printf("user-mode ");
+    }
 
-  if (reserved) {
-    k_printf("reserved ");
-  }
+    if (reserved) {
+      k_printf("reserved ");
+    }
 
-  k_printf(") at 0x%x", faulting_address);
-  k_printf("\n");
+    k_printf(") at 0x%x", faulting_address);
+    k_printf("\n");
+    */
 
   // create a page at the location that the application wants to access
   setup_page(faulting_address);

@@ -9,6 +9,8 @@
 #include "placement_memory.h"
 #include "recursive_page_tables.h"
 
+#include "collections/linked_list.h"
+
 #define RESERVED_MEMORY_IN_BYTES 40 * 1024 * 1024
 #define SIZE_OF_FRAME_IN_BYTES 4 * 1024
 
@@ -31,6 +33,8 @@ long factorial(int n);
 void paging_setup();
 
 void paging_tests();
+
+void output_list_item(linked_list_item_t *item);
 
 void main(unsigned long magic, unsigned long addr) {
 
@@ -136,16 +140,74 @@ void main(unsigned long magic, unsigned long addr) {
   // k_printf("PCI ...\n");
   // init_pcilist();
 
-  void *mem_ptr = k_malloc((size_t)1000);
-  k_free(mem_ptr);
-  mem_ptr = NULL;
+  // void *mem_ptr = malloc((size_t)1000);
+  // free(mem_ptr);
+  // mem_ptr = NULL;
 
-  unsigned long fact = factorial(10);
-  k_printf("Factorial of 10: %d\n", fact);
+  int a = 1;
+  int b = 2;
+  int c = 3;
+  int d = 4;
+
+  linked_list_item_t *linked_list = NULL;
+
+  if (add_to_list(&linked_list, &a) < 0) {
+    k_printf("add failed!\n");
+  }
+
+  // k_printf("length: %d\n", length(linked_list));
+  // iterate_over_list(linked_list, &output_list_item);
+
+  if (add_to_list(&linked_list, &b) < 0) {
+    k_printf("add failed!\n");
+  }
+
+  // k_printf("length: %d\n", length(linked_list));
+  // iterate_over_list(linked_list, &output_list_item);
+
+  if (add_to_list(&linked_list, &c) < 0) {
+    k_printf("add failed!\n");
+  }
+
+  // k_printf("length: %d\n", length(linked_list));
+  // iterate_over_list(linked_list, &output_list_item);
+
+  if (add_to_list(&linked_list, &d) < 0) {
+    k_printf("add failed!\n");
+  }
+
+  // k_printf("length: %d\n", length(linked_list));
+  iterate_over_list(linked_list, &output_list_item);
+
+  // k_printf("length: %d\n", length(linked_list));
+  // k_printf("length: %d\n", length(linked_list));
+
+  delete_list(&linked_list);
+
+  // k_printf("length: %d\n", length(linked_list));
+  // k_printf("length: %d\n", length(linked_list));
+
+  // iterate_over_list(linked_list, &output_list_item);
+
+  // unsigned long fact = factorial(10);
+  // k_printf("Factorial of 10: %d\n", fact);
 
   // after main returns, program flow jumps back to boot.asm which executes
   // hlt to hlt the CPU
   return;
+}
+
+void output_list_item(linked_list_item_t *item) {
+
+  // k_printf("item\n");
+
+  // k_printf("0x%d\n", item);
+  // k_printf("Next: 0x%d\n", item->next);
+  // k_printf("Prev: 0x%d\n", item->prev);
+
+  int *ptr = (int *)(item->payload);
+
+  k_printf("item %d\n", *ptr);
 }
 
 unsigned int allocate_frame_aligned(multiboot_uint64_t *placement_memory,

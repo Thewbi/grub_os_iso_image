@@ -37,6 +37,7 @@ kernel: kernel.c placement_memory.c isr.c descriptor_tables.c common.c memory_ma
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c pci.c -o pci.o
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c multiboot.c -o multiboot.o
 	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c heap_buddy_system_evanw.c -o heap_buddy_system_evanw.o
+	$(GCC) -m32 -std=c99 -ffreestanding -nostdinc -c collections/linked_list.c -o collections/linked_list.o
 
 linker: linker.ld boot.o kernel.o placement_memory.o isr.o gdt.o interrupt.o descriptor_tables.o common.o memory_map.o stack.o bitmap.o paging.o pci.o multiboot.o
 	$(LD) -m elf_i386 -T linker.ld -o kernel \
@@ -54,7 +55,8 @@ linker: linker.ld boot.o kernel.o placement_memory.o isr.o gdt.o interrupt.o des
 	paging.o \
 	multiboot.o \
 	heap_buddy_system_evanw.o \
-	pci.o
+	pci.o \
+	collections/linked_list.o
 
 iso: kernel
 	$(MKDIR) $(GRUB_PATH)
