@@ -5,7 +5,7 @@
 #include "memory_map.h"
 #include "multiboot.h"
 #include "paging.h"
-#include "pci.h"
+#include "pci/pci.h"
 #include "placement_memory.h"
 #include "recursive_page_tables.h"
 
