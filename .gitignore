@@ -3,6 +3,8 @@ testmain
 
 # kernel dev
 image.iso
+kernel
+iso/**
 
 # Prerequisites
 *.d
