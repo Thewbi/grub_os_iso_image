@@ -34,6 +34,8 @@ void paging_setup();
 
 void paging_tests();
 
+void linked_list_test();
+
 void output_list_item(linked_list_item_t *item);
 
 void main(unsigned long magic, unsigned long addr) {
@@ -130,64 +132,21 @@ void main(unsigned long magic, unsigned long addr) {
   // k_printf("%d\n", next_free_frame_index(bitmap, BITMAP_ELEMENT_COUNT));
 
   // identity maps ? Megabyte then turns paging on
-  paging_setup(page_table_count);
+  // paging_setup(page_table_count);
 
-  paging_tests();
+  // paging_tests();
 
   // k_dump_free_memory_map();
 
   // // pci
   // k_printf("PCI ...\n");
-  // init_pcilist();
+  init_pcilist();
 
   // void *mem_ptr = malloc((size_t)1000);
   // free(mem_ptr);
   // mem_ptr = NULL;
 
-  int a = 1;
-  int b = 2;
-  int c = 3;
-  int d = 4;
-
-  linked_list_item_t *linked_list = NULL;
-
-  if (add_to_list(&linked_list, &a) < 0) {
-    k_printf("add failed!\n");
-  }
-
-  // k_printf("length: %d\n", length(linked_list));
-  // iterate_over_list(linked_list, &output_list_item);
-
-  if (add_to_list(&linked_list, &b) < 0) {
-    k_printf("add failed!\n");
-  }
-
-  // k_printf("length: %d\n", length(linked_list));
-  // iterate_over_list(linked_list, &output_list_item);
-
-  if (add_to_list(&linked_list, &c) < 0) {
-    k_printf("add failed!\n");
-  }
-
-  // k_printf("length: %d\n", length(linked_list));
-  // iterate_over_list(linked_list, &output_list_item);
-
-  if (add_to_list(&linked_list, &d) < 0) {
-    k_printf("add failed!\n");
-  }
-
-  // k_printf("length: %d\n", length(linked_list));
-  iterate_over_list(linked_list, &output_list_item);
-
-  // k_printf("length: %d\n", length(linked_list));
-  // k_printf("length: %d\n", length(linked_list));
-
-  delete_list(&linked_list);
-
-  // k_printf("length: %d\n", length(linked_list));
-  // k_printf("length: %d\n", length(linked_list));
-
-  // iterate_over_list(linked_list, &output_list_item);
+  // linked_list_test();
 
   // unsigned long fact = factorial(10);
   // k_printf("Factorial of 10: %d\n", fact);
@@ -479,6 +438,54 @@ void paging_tests() {
   do_page_fault = *ptr;
 
   k_printf("StoredValue: %d\n", do_page_fault);
+}
+
+void linked_list_test() {
+
+  int a = 1;
+  int b = 2;
+  int c = 3;
+  int d = 4;
+
+  linked_list_item_t *linked_list = NULL;
+
+  if (add_to_list(&linked_list, &a) < 0) {
+    k_printf("add failed!\n");
+  }
+
+  // k_printf("length: %d\n", length(linked_list));
+  // iterate_over_list(linked_list, &output_list_item);
+
+  if (add_to_list(&linked_list, &b) < 0) {
+    k_printf("add failed!\n");
+  }
+
+  // k_printf("length: %d\n", length(linked_list));
+  // iterate_over_list(linked_list, &output_list_item);
+
+  if (add_to_list(&linked_list, &c) < 0) {
+    k_printf("add failed!\n");
+  }
+
+  // k_printf("length: %d\n", length(linked_list));
+  // iterate_over_list(linked_list, &output_list_item);
+
+  if (add_to_list(&linked_list, &d) < 0) {
+    k_printf("add failed!\n");
+  }
+
+  // k_printf("length: %d\n", length(linked_list));
+  iterate_over_list(linked_list, &output_list_item);
+
+  // k_printf("length: %d\n", length(linked_list));
+  // k_printf("length: %d\n", length(linked_list));
+
+  delete_list(&linked_list);
+
+  // k_printf("length: %d\n", length(linked_list));
+  // k_printf("length: %d\n", length(linked_list));
+
+  // iterate_over_list(linked_list, &output_list_item);
 }
 
 long factorial(int n) {

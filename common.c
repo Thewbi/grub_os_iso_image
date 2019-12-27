@@ -12,7 +12,7 @@ void outb(u8int value, u16int port) {
 // write a word (16 bit) out to the specified port.
 void outw(u16int value, u16int port) {
 
-  __asm__ __volatile__("outb %1, %0" : : "dN"(port), "a"(value));
+  __asm__ __volatile__("outw %1, %0" : : "dN"(port), "a"(value));
 }
 
 // "l" meaning long (32bits)

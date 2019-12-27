@@ -15,7 +15,10 @@ typedef unsigned char u8int;
 typedef char s8int;
 
 typedef unsigned long long multiboot_uint64_t;
+
+typedef unsigned long long uint64_t;
 typedef unsigned int uint32_t;
+typedef unsigned short uint16_t;
 
 typedef unsigned int size_t;
 
